@@ -1,0 +1,1804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="background-color" content="#0f172a">
+    <meta name="application-name" content="OECD TIN Validator">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="TIN Validator">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#0f172a">
+    <meta name="msapplication-TileImage" content="icons/icon-144.png">
+    <title>OECD Global TIN Validation Engine</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- TomSelect (Dropdown) -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+    <!-- html2canvas for Print Screen (JPEG output) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .bg-orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            z-index: -1;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+        .orb-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: radial-gradient(circle, #3b82f6, #1e3a8a); animation-delay: 0s; }
+        .orb-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: radial-gradient(circle, #6366f1, #312e81); animation-delay: -5s; }
+        .orb-3 { top: 40%; left: 60%; width: 40vw; height: 40vw; background: radial-gradient(circle, #0ea5e9, #082f49); animation-delay: -10s; opacity: 0.3; }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(30px, -50px) scale(1.1); }
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #f8fafc;
+            transition: all 0.3s ease;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        
+        .glass-input::placeholder {
+            font-size: 0.95rem;
+            text-transform: none !important;
+            letter-spacing: normal !important;
+            font-family: 'Inter', sans-serif !important;
+            color: #64748b;
+        }
+        
+        .step-disabled {
+            opacity: 0.4;
+            pointer-events: none;
+            filter: grayscale(80%);
+            transition: all 0.3s ease;
+        }
+
+        .ts-wrapper { z-index: 60; position: relative; }
+        .ts-wrapper.single .ts-control, .ts-wrapper.single .ts-control input {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+            border-radius: 0.5rem !important;
+            padding: 1rem 1.25rem !important;
+            font-size: 1.05rem !important;
+            box-shadow: none !important;
+            cursor: pointer;
+        }
+        .ts-wrapper.single.focus .ts-control {
+            border-color: #3b82f6 !important;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+            background-color: rgba(30, 58, 138, 0.2) !important;
+        }
+        .ts-dropdown {
+            background-color: #1e293b !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 0.5rem !important;
+            box-shadow: 0 20px 40px -5px rgba(0, 0, 0, 0.9) !important;
+            margin-top: 4px !important;
+            z-index: 99999 !important;
+        }
+        .ts-dropdown .option { padding: 0.75rem 1.25rem !important; border-bottom: 1px solid rgba(255,255,255,0.05); color: white; }
+        .ts-dropdown .option.active, .ts-dropdown .option:hover { background-color: #3b82f6 !important; color: white !important; }
+
+        /* Base Export Utilities */
+        .export-only { display: none; }
+        .exporting-ui .no-export { display: none !important; }
+        .exporting-ui .export-only { display: block !important; }
+        .exporting-ui .ts-wrapper { display: none !important; }
+        .exporting-ui #tinInput { display: none !important; }
+        .exporting-ui .bg-orb { display: none !important; }
+
+        /* Print PDF Layout (Flattens grids to prevent hanging/blank spaces) */
+        @media print {
+            body {
+                background-color: #0f172a !important;
+                color: #f8fafc !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            #main-app, main, .responsive-grid, .responsive-grid > div {
+                display: block !important;
+                height: auto !important;
+                min-height: auto !important;
+                flex: none !important;
+            }
+            .glass-card {
+                background-color: #1e293b !important;
+                border: 1px solid #334155 !important;
+                box-shadow: none !important;
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                margin-bottom: 2rem !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            /* Step 4 needs to naturally break across pages due to long text */
+            #step4-card { page-break-inside: auto !important; break-inside: auto !important; }
+            .bg-clip-text { background: none !important; -webkit-text-fill-color: #60a5fa !important; color: #60a5fa !important; }
+            @page { size: A4; margin: 10mm; }
+        }
+
+        body.print-layout {
+            background-color: #0f172a !important;
+            color: #f8fafc !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        body.print-layout #main-app,
+        body.print-layout main,
+        body.print-layout .responsive-grid,
+        body.print-layout .responsive-grid > div {
+            display: block !important;
+            height: auto !important;
+            min-height: auto !important;
+            flex: none !important;
+        }
+
+        body.print-layout .glass-card {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            margin-bottom: 2rem !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+        }
+
+        body.print-layout #step4-card {
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+        }
+
+        body.print-layout .bg-clip-text {
+            background: none !important;
+            -webkit-text-fill-color: #60a5fa !important;
+            color: #60a5fa !important;
+        }
+
+        /* JPEG Layout (Preserves grid, fixes transparency glitches for html2canvas) */
+        .canvas-layout { background-color: #0f172a !important; }
+        .canvas-layout .glass-card {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+            backdrop-filter: none !important; 
+            -webkit-backdrop-filter: none !important;
+        }
+        .canvas-layout .bg-clip-text { background: none !important; -webkit-text-fill-color: #60a5fa !important; color: #60a5fa !important; }
+    </style>
+</head>
+<body class="antialiased relative selection:bg-blue-500/30 flex flex-col">
+
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+    
+    <!-- Custom Toast Container (replaces alerts) -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
+
+    <div id="login-modal" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/95 backdrop-blur-xl transition-opacity duration-300">
+        <div class="glass-card rounded-2xl w-full max-w-md p-8 m-4 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500"></div>
+            
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-500/20 text-blue-400 mb-4 ring-1 ring-blue-500/50">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h1 class="text-2xl font-bold text-white tracking-tight">Secure Access</h1>
+                <p class="text-slate-400 text-sm mt-2">OECD Global TIN Validation Engine</p>
+            </div>
+
+            <form id="login-form" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">User Name</label>
+                    <input type="text" id="username" required class="glass-input w-full rounded-lg px-4 py-3" placeholder="Enter your full name">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-300 mb-1">Password</label>
+                    <div class="relative">
+                        <input type="password" id="password" required autocapitalize="none" autocorrect="off" class="glass-input w-full rounded-lg px-4 py-3 pr-12" placeholder="••••••••">
+                        <button type="button" id="toggle-password" class="absolute inset-y-0 right-0 px-3 flex items-center text-slate-400 hover:text-white transition-colors" title="Toggle Visibility">
+                            <svg id="eye-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        </button>
+                    </div>
+                </div>
+                <div id="login-error" class="hidden text-rose-400 text-sm font-medium bg-rose-500/10 p-3 rounded-lg border border-rose-500/20 text-center">
+                    Invalid credentials. Please try again.
+                </div>
+                <button type="submit" class="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold rounded-lg shadow-lg transition-all transform hover:-translate-y-0.5">
+                    Login to Dashboard
+                </button>
+            </form>
+            <div class="mt-6 text-center text-slate-500 text-xs border-t border-white/5 pt-4">
+                Developed by CA. Prasham Veer Jain
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden flex-col min-h-screen">
+        <header id="dashboard-header" class="w-full py-6 px-4 md:px-8 mb-4 border-b border-white/10 glass-card rounded-none z-40 relative">
+            <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 class="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300 tracking-tight !text-blue-400">
+                        OECD Global TIN Validation Engine
+                    </h1>
+                    <p class="text-slate-400 mt-2 text-sm md:text-base max-w-xl">
+                        Secure, format-strict validation tool for Tax Identification Numbers based on official OECD dataset rules.
+                    </p>
+                </div>
+                <div class="flex flex-col items-end gap-2 w-full md:w-auto">
+                    <div class="flex flex-col items-end bg-slate-800/50 p-3 rounded-xl border border-white/5 w-full md:w-auto min-w-[300px]">
+                        <div class="flex items-center gap-4 justify-between w-full">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse no-export"></div>
+                                <span class="text-sm text-slate-300 font-medium">Authorised User: <span id="display-username" class="text-white font-bold"></span></span>
+                            </div>
+                            <button id="install-btn" class="hidden no-export text-xs bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 px-3 py-1.5 rounded-full transition-colors border border-emerald-500/30 ml-2">Install App</button>
+                            <button onclick="handleLogout()" class="no-export text-xs bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 px-3 py-1.5 rounded-full transition-colors border border-rose-500/30 ml-2">Logout</button>
+                        </div>
+                        <div class="w-full border-t border-white/10 my-1"></div>
+                        <div id="live-clock" class="text-xs text-slate-400 font-mono text-right w-full"></div>
+                        <div id="export-timestamp" class="hidden export-only text-xs text-blue-300 font-mono text-right w-full mt-1"></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main id="dashboard-content" class="flex-grow container mx-auto px-4 pb-10 max-w-6xl flex flex-col gap-6 p-4">
+            
+            <div class="responsive-grid grid grid-cols-1 lg:grid-cols-2 gap-6 relative">
+                
+                <!-- STEP 1 -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col relative z-50">
+                    <div class="absolute -top-3 -right-3 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">STEP 1</div>
+                    <h2 class="text-xl font-semibold mb-6 flex items-center gap-2 text-white">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Select Jurisdiction
+                    </h2>
+                    
+                    <div class="flex-grow flex flex-col justify-center pb-4 relative">
+                        <label class="block text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
+                            OECD Jurisdiction / TIN Issuing Country
+                        </label>
+                        <div class="relative z-[999] no-export">
+                            <select id="countrySelect" placeholder="Type country code or name..." autocomplete="off"></select>
+                        </div>
+                        
+                        <!-- Export text fallback -->
+                        <div id="export-country-container" class="export-only">
+                            <div class="text-sm text-slate-400 uppercase tracking-wider font-bold block mb-1">OECD JURISDICTION / TIN ISSUING COUNTRY</div>
+                            <div id="export-country-text" class="text-lg font-bold text-blue-300 bg-slate-800/80 border border-slate-600 rounded-lg p-4 shadow-inner">
+                                No Country Selected
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2 -->
+                <div id="step2-card" class="glass-card rounded-2xl p-6 flex flex-col relative step-disabled z-40">
+                    <div class="absolute -top-3 -right-3 bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">STEP 2</div>
+                    <h2 class="text-xl font-semibold mb-6 flex items-center gap-2 text-white">
+                        <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                        Input Tax ID (TIN)
+                    </h2>
+
+                    <div class="flex bg-slate-800/50 p-1 rounded-lg border border-white/5 mb-5 no-export">
+                        <button id="btn-individual" class="flex-1 py-2 text-sm font-medium rounded-md transition-all bg-white/10 text-white shadow-sm" onclick="setEntityType('individual')">Individual</button>
+                        <button id="btn-entity" class="flex-1 py-2 text-sm font-medium rounded-md transition-all text-slate-400 hover:text-white" onclick="setEntityType('entity')">Entity / Non Individual</button>
+                    </div>
+                    
+                    <!-- Export text fallback -->
+                    <div class="export-only mb-4">
+                        <span class="text-sm text-slate-400 uppercase tracking-wider font-bold block mb-1">ENTITY TYPE:</span>
+                        <span id="export-entity-type-text" class="text-lg text-white font-bold">Individual</span>
+                    </div>
+
+                    <div class="flex-grow flex flex-col justify-center relative">
+                        <label class="block text-sm font-medium text-slate-300 mb-2">Enter TIN exactly as provided</label>
+                        
+                        <div class="relative flex items-center no-export">
+                            <input type="text" id="tinInput" 
+                                class="glass-input w-full rounded-lg pl-4 pr-[6.5rem] py-4 text-xl font-mono uppercase tracking-widest shadow-inner placeholder:text-slate-500 placeholder:normal-case placeholder:tracking-normal placeholder:font-sans placeholder:text-sm"
+                                placeholder="Select country first" autocomplete="off">
+                            <div class="absolute right-24 flex items-center pointer-events-none">
+                                <svg id="input-status-icon" class="h-6 w-6 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"></svg>
+                            </div>
+                            <button onclick="handlePaste()" type="button" class="absolute right-2 px-4 py-2 bg-blue-500/20 hover:bg-blue-500/40 text-blue-300 rounded-md text-sm font-bold tracking-wider transition-colors border border-blue-500/30 shadow-md">
+                                PASTE
+                            </button>
+                        </div>
+                        
+                        <!-- Export text fallback -->
+                        <div id="export-tin-container" class="export-only">
+                            <div id="export-tin-text" class="text-2xl font-mono tracking-widest text-white bg-slate-900/80 border border-slate-600 rounded-lg p-4 shadow-inner">
+                            </div>
+                        </div>
+
+                        <p class="text-xs text-slate-400 mt-3 flex items-center gap-1.5 bg-slate-800/50 p-2 rounded-md border border-white/5 no-export">
+                            <svg class="w-4 h-4 text-blue-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Auto-capitalizes and strips leading/trailing spaces on paste.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3 -->
+            <div id="step3-card" class="glass-card rounded-2xl p-6 relative step-disabled z-30">
+                 <div class="absolute -top-3 -right-3 bg-cyan-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">STEP 3</div>
+                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                     <h2 class="text-xl font-semibold flex items-center gap-2 text-white">
+                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Validation Engine Status
+                    </h2>
+                    
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto no-export">
+                        <button id="png-export-btn" onclick="executeExport('jpg')" class="hidden justify-center bg-purple-600/80 hover:bg-purple-500 text-white text-sm py-2 px-4 rounded-lg flex items-center gap-2 border border-purple-500/50 transition-colors shadow-lg">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            Print Screen
+                        </button>
+                        <button id="print-btn" onclick="executeExport('print')" class="hidden justify-center bg-blue-600/80 hover:bg-blue-500 text-white text-sm py-2 px-4 rounded-lg flex items-center gap-2 border border-blue-500/50 transition-colors shadow-lg">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                            Print/Export
+                        </button>
+                    </div>
+                 </div>
+                
+                <div id="validation-empty-state" class="text-center py-10 text-slate-400 border border-dashed border-white/10 rounded-xl bg-slate-800/30">
+                    Select a country and enter a TIN to see real-time validation results.
+                </div>
+
+                <div id="validation-loading" class="hidden text-center py-10 flex flex-col items-center justify-center">
+                    <svg class="animate-spin h-8 w-8 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <p class="text-blue-300 text-sm font-medium animate-pulse">Running strict format checks...</p>
+                </div>
+
+                <div id="validation-result-content" class="hidden">
+                    <div id="result-banner" class="rounded-xl p-5 flex items-start gap-4 border mb-5 shadow-lg bg-opacity-10">
+                        <div id="result-icon" class="mt-1 shrink-0"></div>
+                        <div>
+                            <h3 id="result-title" class="text-lg font-bold"></h3>
+                            <p id="result-msg" class="text-slate-300 text-sm mt-1"></p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800/40 rounded-xl p-4 border border-white/5">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Allowed Formats for <span id="lbl-entity-type" class="text-slate-300"></span> in <span id="lbl-country" class="text-blue-300"></span></h4>
+                        <div id="allowed-formats-container" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4 -->
+            <div id="step4-card" class="glass-card rounded-2xl p-6 relative step-disabled z-20">
+                <div class="absolute -top-3 -right-3 bg-emerald-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">STEP 4</div>
+                <h2 class="text-xl font-semibold mb-6 flex items-center gap-2 text-white">
+                    <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    TIN structure description as per OECD guidelines
+                </h2>
+                
+                <div class="responsive-grid grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-slate-800/40 p-5 rounded-xl border border-white/5 flex flex-col">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-slate-200">Individuals</h3>
+                            <span id="badge-auto-ind" class="text-xs px-2 py-1 rounded-md border font-medium">TIN Auto-Issued: ?</span>
+                        </div>
+                        <p id="info-desc-ind" class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-serif bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 flex-grow shadow-inner"></p>
+                    </div>
+                    
+                    <div class="bg-slate-800/40 p-5 rounded-xl border border-white/5 flex flex-col">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-slate-200">Entity / Non Individual</h3>
+                            <span id="badge-auto-ent" class="text-xs px-2 py-1 rounded-md border font-medium">TIN Auto-Issued: ?</span>
+                        </div>
+                        <p id="info-desc-ent" class="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap font-serif bg-slate-900/50 p-4 rounded-lg border border-slate-700/50 flex-grow shadow-inner"></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer id="dashboard-footer" class="w-full py-4 text-center z-40 border-t border-white/10 bg-slate-900/90 backdrop-blur-md mt-auto">
+            <p class="text-slate-300 text-sm md:text-base font-medium tracking-wide">
+                Developed by CA. Prasham Veer Jain <span class="mx-2 text-slate-500">|</span> <span class="text-slate-400">Latest update: July 16, 2026</span>
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Exact dataset provided verbatim. Custom TSV parser handles the internal newlines.
+        const rawTSV = `Sr. No.	Country Name	Country code	Automatic issuance of TINs (Individuals)	Automatic issuance of TINs (Entities)	TIN format for Individuals	TIN format Descriptions for Individuals as per OECD	TIN formats for Entities	TIN format Descriptions for Entities as per OECD
+1	Afghanistan	AF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+2	Åland Islands	AX	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+3	Albania	AL	Yes	Yes	A99999999A	"The TIN for individuals (National ID number NID), is a unique number, consisting of ten characters (e.g. I05101999Q) with coded information and with the following structure:
+Characters 1and 2: year of birth
+Characters 3 and 4: month of birth, gender
+Characters 5 and 6: day of birth
+Characters 7 to 9: issuing order number, within the same date
+Character 10: check digit."	J99999999N	"The TIN (issued to taxpayers – legal entities / persons exercising economic activity) appears like this: J12345678N.
+The first character is a capital letter, indicating the decade the TIN was issued (e.g. ""J"" for 1990 - 1999, ""K"" for 2000 - 2009, etc.)
+The 2nd character indicates the year (within the above-mentioned decade) the TIN was issued (e.g. 1 for 2011, 2 for 2012)
+3rd and 4th characters indicate the converted month of the year the TIN was issued, depending on district where the business was established for the first time (e.g. January for Tirana - 13, February for Tirana - 14, January for another district - 25, February for that district - 26, etc.)
+5th and 6th characters indicate the day of the month the TIN was issued (e.g. 01, 02, 03 etc.)
+Characters 7 to 9 indicate the issuing order of the TIN within the above-mentioned day and in a specific district, (e.g. 009 is the 9th TIN issued in Tirana district, 108 is the 8th TIN issued in another district, etc)
+10th character is a check digit (capital letter), calculated according to a formula that depends on the first 9 characters."
+4	Algeria	DZ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+5	American Samoa	AS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+6	Andorra	AD	Yes	No	"F-999999-Z,
+E-999999-Z"	"F-123456-Z
+F + 6 digits + 1 control letter
+Resident - Número d’Identificació Administrativa (NIA) preceded by a letter “F”.
+
+E-123456-Z
+E + 6 digits + 1 control letter - Non-resident"	"A-999999-Z,
+L-999999-Z,
+E-999999-Z,
+C-999999-Z,
+D-999999-Z,
+G-999999-Z,
+O-999999-Z,
+P-999999-Z,
+U-999999-Z"	"A-123456-Z - A + 6 digits + 1 control letter - Limited company (societat anònima)
+L-123456-Z - L + 6 digits + 1 control letter - Private limited company (societat limitada)
+E-123456-Z - E + 6 digits + 1 control letter - Non-resident legal entities (including legal persons)
+
+Other entities
+
+C-123456-Z - C + 6 digits + 1 control letter - Joint ownership arrangements (comunitats de béns)
+D-123456-Z - D + 6 digits + 1 control letter - Public entities/bodies
+G-123456-Z - G + 6 digits + 1 control letter - Tax groups
+O-123456-Z - O + 6 digits + 1 control letter - Collective Investment Schemes
+P-123456-Z - P + 6 digits + 1 control letter - Associations/Foundations
+U-123456-Z - U + 6 digits + 1 control letter - Parapublic entities"
+7	Angola	AO	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+8	Anguilla	AI	No	No	1999999999	"TINs are unique numbers automatically generated by the tax administration system and consists of 10 digits, including prefix digit and check digit. Individual TINs start with prefix 1."	2999999999	"TINs are unique numbers automatically generated by the tax administration system and consists of 10 digits, including prefix digit and check digit. Non-Individual (business) TINs start with prefix 2."
+9	Antarctica	AQ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+10	Antigua and Barbuda	AG	No	No	99999999	"This section contains information on the alphanumeric structure of the TIN, the use of slashed, capital letter, hyphens, etc. In addition, please outline the meaning given to the numbers and letters that make up the TIN (including for instance the use of check digits).
+TINs are assigned at the end of the registration process by our Tax Administration software (SIGTAS), with the smallest number being 6 digits. TINs only contain numbers. Check digits are only incorporated for Taxpayers that are registered to pay VAT(ABST). For Tax account numbers, the IRD's software assigns the tax account numbers by attaching the tax type code(a 2-digit number) to the end of the TIN. *Therefore a tax account number will be a minimum of 8 digits*"	99999999	"This section contains information on the alphanumeric structure of the TIN, the use of slashed, capital letter, hyphens, etc. In addition, please outline the meaning given to the numbers and letters that make up the TIN (including for instance the use of check digits).
+TINs are assigned at the end of the registration process by our Tax Administration software (SIGTAS), with the smallest number being 6 digits. TINs only contain numbers. Check digits are only incorporated for Taxpayers that are registered to pay VAT(ABST). For Tax account numbers, the IRD's software assigns the tax account numbers by attaching the tax type code(a 2-digit number) to the end of the TIN. *Therefore a tax account number will be a minimum of 8 digits*"
+11	Argentina	AR	No	No	9999999999	"The CUIT consists of 11 digits:
+- the first 2 digits indicate the person: the numbers 20, 23, 24 or 27 are assigned randomly for individuals on a non-binary basis, and 30 or 33 for legal persons."	9999999999	"The CUIT consists of 11 digits:
+- the first 2 digits indicate the person: the numbers 20, 23, 24 or 27 are assigned randomly for individuals on a non-binary basis, and 30 or 33 for legal persons."
+12	Armenia	AM	Yes	Yes	99999999	"TIN consists of 8 digits; no other symbols could be used. First seven digits are next serial number, 8th digit is check digit and calculated based on the previous 7 digits. No meaning is given to the numbers."	99999999	"TIN consists of 8 digits; no other symbols could be used. First seven digits are next serial number, 8th digit is check digit and calculated based on the previous 7 digits. No meaning is given to the numbers."
+13	Aruba	AW	No	No	99999999	The TIN is generated by the automated system after registering certain data of a tax payer and exists of 8 digits.	99999999	The TIN is generated by the automated system after registering certain data of a tax payer and exists of 8 digits.
+14	Australia	AU	No	No	99999999	"The TFN is an eight or nine digit number compiled using a check digit algorithm to allow accurate data capture of the TFN in ATO systems. Generally the TFN is displayed on correspondence as three sets of three numbers (for example XXX XXX XXX) but is stored as an eight or nine number string on internal systems.
+"	99999999999	The ABN is a unique 11 digit number formed from a nine digit unique identifier and two prefix check digits. The two leading digits (the check digits) will be derived from the subsequent nine digits using a modulus 89 check digit calculation. The check digits will be included to identify common data entry errors such as digit transposition. The ABN will be structured as XX XXX XXX XXX.
+15	Austria	AT	No	Yes	"999999999, 99-999/9999"	9 digits; 99-999/9999; Comments - The hyphen and the slash are not mandatory in all cases (eg for the purpose of IT processing they should be omitted)	999999999	9 digits
+16	Azerbaijan	AZ	No	Yes	"9999999992, 9AAA9AA"	"TIN is a ten-digit code, where the first two digits characterize code of territorial administrative unit, the following six digits characterize a serial number.
+The software determines the ninth digit via special algorithm, and the legal status of a taxpayer by
+assigning number 1 for legal persons and number 2 for natural persons as the tenth digit.
+The Personal Identification Number (PIN) is a single code consisting of a combination of letters and digits with seven symbols and never changed. It consists of the following 7 digits and letters,
+For old passport and National ID - leaving the first digit of national identity card or last 7 digits and letters passport on the right lower corner before < symbol.
+For new passport and National ID –is indicated as “Personal No”
+For individuals:
+A. TIN example: 1525855852
+B. PIN example: 5VBK5VR (there is never “O” letter in PIN, only “0” (zero))"	9999999991	"TIN is a ten-digit code, where the first two digits characterize code of territorial administrative unit, the following six digits characterize a serial number.
+The software determines the ninth digit via special algorithm, and the legal status of a taxpayer by
+assigning number 1 for legal persons and number 2 for natural persons as the tenth digit.
+For legal persons: TIN example: 1325678851"
+17	Bahamas	BS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+18	Bahrain	BH	No	No	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+19	Bangladesh	BD	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+20	Barbados	BB	No	No	1999999999999	"Barbados’ TIN is a unique 13 digital number. The number is randomly generated by the system. Each TIN starts with the number “1”. There are no letters, symbols or other characters in the TIN. There are no slashes (/) or dashes (-)."	1999999999999	"Barbados’ TIN is a unique 13 digital number. The number is randomly generated by the system. Each TIN starts with the number “1”. There are no letters, symbols or other characters in the TIN. There are no slashes (/) or dashes (-)."
+21	Belarus	BY	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+22	Belgium	BE	Yes	Yes	99999999999	For individuals the TIN number of identification consists of eleven digits and is a unique number of identification for every registered person.	9999999999	For companies the TIN number of identification consists of ten digits (business number)
+23	Belize	BZ	No	No	9999999	"The TIN consists of 7 digits which includes the use of check digit. ""All successfully registered taxpayers through our Revenue Management System will be generated a 6 Digit TIN number, and an additional single check digit at the end."" The check digit is not visible to the taxpayer."	9999999	"The TIN consists of 7 digits which includes the use of check digit. ""All successfully registered taxpayers through our Revenue Management System will be generated a 6 Digit TIN number, and an additional single check digit at the end."" The check digit is not visible to the taxpayer."
+24	Benin	BJ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+25	Bermuda	BM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+26	Bhutan	BT	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+27	Bolivia (Plurinational State of)	BO	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+28	"Bonaire, Sint Eustatius and Saba"	BQ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+29	Bosnia and Herzegovina	BA	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+30	Botswana	BW	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+31	Bouvet Island	BV	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+32	Brazil	BR	Yes	Yes	99999999999	"For individuals, it consists of 11 digits (the 2 last numbers are the result of an arithmetic operation on the 9 previous ones)"	99.999.999/9999-99	"For legal persons, it consists of 14 digits formatted as XX.XXX.XXX/XXXX-XX (the first 8 digits identify the company, the 4 digits after the slash identify the branch or subsidiary and the last 2 are the result of an arithmetic operation on the previous ones)."
+33	British Indian Ocean Territory	IO	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+34	British Virgin Islands	VG	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+35	Brunei Darussalam	BN	No	No	99-999999	"Individual:
+There is no TIN issued for individual. In the absence of TIN, the functional equivalent are as follows:
+NRIC Number: This is for Brunei Darussalam Citizen, Permanent Resident of Brunei Darussalam and Temporary Resident of Brunei Darussalam.
+Brunei Darussalam Citizen – Yellow bordered cards with yellow printing and holders are aged 12 years and above.
+Permanent Resident – Purple bordered cards with purple printing and holders are aged 12 years and above.
+Temporary Resident – Green bordered cards with purple printing aged and holders hold any immigration passes of 3 month above. Holders are aged 12 years and above"	"P99999999, RC99999999, RFC99999999"	"Entity:
+There is no TIN issued for Entities. In the absence of TIN, the functional equivalent for entities in Brunei are as follows:
+PXXXXXXXX – Standard registration number issued to Sole-Proprietorships or Partnerships registered under the Brunei’s Business Names Act, Chapter 92 (BNA).
+RCXXXXXXXX – Standard registration number issued to Private Limited Companies and Public Companies incorporated under the Brunei’s Companies Act, Chapter 39 (CA).
+RFCXXXXXXXX – Standard registration number issued to Foreign Branch of companies registered under the Brunei’s Companies Act, Chapter 39.
+All of the above registration numbers are issued by the Registry of Companies and Business Names Division, Ministry of Finance."
+36	Bulgaria	BG	Yes	Yes	9999999999	For individuals: 9999999999 – 10 digits	999999999	For entities: 999999999 – 9 digits
+37	Burkina Faso	BF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+38	Burundi	BI	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+39	Cabo Verde	CV	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+40	Cambodia	KH	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+41	Cameroon	CM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+42	Canada	CA	No	No	999999999	"For individuals resident in Canada, their authorized tax identification number is their nine-digit Canadian Social Insurance Number (SIN) issued by Service Canada. Every individual resident in Canada with income tax filing obligations (or in respect of whom an information return is to be made) is required to have (or obtain) a SIN.
+SINs are confidential but are required to be furnished on request to financial institutions for tax reporting purposes."	"999999999, T99999999"	"For corporations & partnerships, their tax identification number is a unique nine-digit Business Number (BN) issued by the Canada Revenue Agency.
+For trusts, their tax identification number is their eight-digit trust account number preceded by the letter “T” issued by the Canada Revenue Agency."
+43	Cayman Islands	KY	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+44	Central African Republic	CF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+45	Chad	TD	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+46	Chile	CL	No	No	"99.999.999-9,  99.999.999-K"	"The TIN consists of two parts: the serial number, a dash (-) and the check digit, (xx.xxx.xxx-x) which is obtained through an algorithm that consist of one digit ranging from 0 to 9 or letter K. The check digit serves to validate the TIN, since this number may only have one check digit.
+To verify that a TIN is right, a formula called the algorithm module 11 should be applied to the number that comes before the hyphen. This is an arithmetic formula wherein the sum of the multiplication is multiplied by 10 and divided by 11.
+If the result of the above operation matches the check digit, the TIN structure is valid. The check digit has three fundamental rules:
+1.  If it is equal to the result it is between 1 and 9;
+2. K if the result is 10;
+3. 0 (zero) if the result is 11."	"99.999.999-9,  99.999.999-K"	"The TIN consists of two parts: the serial number, a dash (-) and the check digit, (xx.xxx.xxx-x) which is obtained through an algorithm that consist of one digit ranging from 0 to 9 or letter K. The check digit serves to validate the TIN, since this number may only have one check digit.
+To verify that a TIN is right, a formula called the algorithm module 11 should be applied to the number that comes before the hyphen. This is an arithmetic formula wherein the sum of the multiplication is multiplied by 10 and divided by 11.
+If the result of the above operation matches the check digit, the TIN structure is valid. The check digit has three fundamental rules:
+1.  If it is equal to the result it is between 1 and 9;
+2. K if the result is 10;
+3. 0 (zero) if the result is 11."
+47	China	CN	Yes	No	"999999999999999999, 99999999999999999A, C99999999999999999, C9999999999999999A, W99999999999999999, W9999999999999999A, J99999999999999, H99999999999999999, H9999999999999999A, M99999999999999999, M9999999999999999A, T99999999999999999, T9999999999999999A"	"For an individual using Chinese ID card as its identification, TIN is its ID number which consists of 18 characters. For an individual using passport or other ID certificate as its identification, TIN is assigned in the following format. In some areas, passport numbers are also recognized as TIN for foreign individuals.
+
+Type of taxpayer, TIN Format and its Explanation 
+1.	Individual (using Chinese ID card as its identification)
+a.	Format – 999999999999999999, 99999999999999999x 	
+b.	Explanation – 18 numerals or 17 numerals followed by letter “x” 
+2.	Individual (using Chinese passport as its identification) 	
+a.	Format – C99999999999999999, C9999999999999999x 	
+b.	Explanation – First character is “C” followed by 17 numerals or 16 numerals with a letter. 
+3.	Individual (using Foreign passport as its identification) 	
+a.	Format – W99999999999999999, W9999999999999999x 
+b.	Explanation – First character is “W” followed by 17 numerals or 16 numerals with a letter. 
+4.	Individual (using Soldier card as its identification) 
+a.	Format – J99999999999999 	
+b.	Explanation – First character is “J” followed by 14 numerals. 
+5.	Individual (using Mainland Travel Permit for Hong Kong Residents as its identification) 
+a.	Format – H99999999999999999, H9999999999999999x 	
+b.	Explanation – First character is “H” followed by 17 numerals or 16 numerals with a letter. 
+6.	Individual (using Mainland Travel Permit for Macau Residents as its identification)
+a.	Format – M99999999999999999, M9999999999999999x 
+b.	Explanation – First character is “M” followed by 17 numerals or 16 numerals with a letter. 
+7.	Individual (using Mainland Travel Permit for Taiwan Residents as its identification)
+a.	Format – T99999999999999999, T9999999999999999x 	
+b.	Explanation – First character is “T” followed by 17 numerals or 16 numerals with a letter."	"999999999999999, 999999999999999999, 99999999AAAAAAAAAA"	"For entities, it consists of 15 characters (old TIN regime) or 18 characters (new TIN regime).
+For the old TIN regime, there are 15 numerals. While for the new TIN regime, there are 18 numerals with sometimes letters appearing in the last 10 characters, especially the 9th, 10th, 13rd and 18th."
+48	Christmas Island	CX	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+49	Cocos (Keeling) Islands	CC	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+50	Colombia	CO	No	No	9999999999	"For individuals, the Tax Identification Number – TIN consist of 1 and up to 13 digits plus a verification digit included by the National Tax and Customs Directorate (DIAN). The configuration of the Tax Identification Number is as follows:
+For citizenship cards with identification numbers in the range of 1 to 99999999, the TIN corresponds to the same number of the citizenship card plus a verification digit.
+For the identification types of identity card and civil registry, issued prior to the Unique Personal Identification Number (NUIP), a TIN is assigned in the numerical range between 700000001 to 799999999, plus a verification digit.
+For individuals with a nationality other than Colombian, identified with types of identification documents such as passport, foreigner identification, Special Stay Permission (PEP), Temporary Protection Permission (PPT), among others; a TIN is assigned in the numerical range between 600000001 to 799999999, plus a verification digit.
+For Colombians whose identification number is from the number 1000000000, the TIN corresponds to the same identification number plus a verification digit."	9999999999	"Currently, the Tax Identification Number – TIN assigned by the National Tax and Customs Directorate (DIAN) to legal entities, de facto companies and other state or private entities and assimilated to these, consists of nine (9) digits plus a verification digit included by the National Tax and Customs Directorate (DIAN) (Administrative Order 4 of 1989). The TINs assigned to this type of organization are between the range 800000000 to 899999999 and ascending from 900000000."
+51	Comoros	KM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+52	Congo	CG	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+53	Congo (the Democratic Republic of the)	CD	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+54	Cook Islands	CK	No	No	99999	"Numeric and must be 5 digits, e.g. NNNNN"	99999	"Numeric and must be 5 digits, e.g. NNNNN"
+55	Costa Rica	CR	Yes	Yes	"999999999, 99999999999, 999999999999, 3120999999"	"Physical identification number, in the case of domestic natural persons.
+In the case of foreign natural persons, registration is done with the “Immigration Identification Document for Foreigners”, called DIMEX. This document is issued by the General Directorate of Immigration."	"9999999999, 3130999999"	"Corporate identification number, in case of legal persons."
+56	Côte d'Ivoire	CI	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+57	Croatia	HR	Yes	Yes	99999999999	"Personal Identification Number consists of 11 digits. 10 digits are randomly chosen, while the 11th digit represents the control number calculated by ""Modul 11.10 "" ISO 7064th"	99999999999	"Personal Identification Number consists of 11 digits. 10 digits are randomly chosen, while the 11th digit represents the control number calculated by ""Modul 11.10 "" ISO 7064th"
+58	Cuba	CU	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+59	Curaçao	CW	No	Yes	999999999	The TIN is generated by the automated system after registering certain data of a tax payer and exists of 9 digits.	999999999	The TIN is generated by the automated system after registering certain data of a tax payer and exists of 9 digits.
+60	Cyprus	CY	No	No	99999999L	"8 numbers followed by a letter, the letter belongs to the Latin alphabet and is always upper. From 27/3/2023 TIN is issued by TFA system starting from 60000000, with a Latin character generated from an algorithm for the check character."	99999999L	"8 numbers followed by a letter, the letter belongs to the Latin alphabet and is always upper. From 27/3/2023 TIN is issued by TFA system starting from 60000000, with a Latin character generated from an algorithm for the check character."
+61	Czechia	CZ	No	Yes	"999999999, 9999999999, 699999999"	"Tax Identification Number (TIN) consisted of the country code CZ followed by either the Business Identification Number, the Personal Identification Number, or the Special (generated) Identification Number, depending on the type of entity and its identifier.
+999999999 9 digits Personal Identification Number (Social Security Number) for individuals born in or before 1953.
+9999999999 10 digits Personal Identification Number (Social Security Number) for individuals born in or after 1954.
+699999999 9 digits (first digit is 6) Special (generated) Identification Number is issued to individuals who do not have a Personal Identification Number and to legal entities that do not have a Business Identification Number."	99999999	99999999 8 digits Business Identification Number (number issued by registry office to legal or natural persons for business purposes).
+62	Denmark	DK	Yes	No	999999-9999	"10 digits with a hyphen between the 6th and 7th digit.
+The last digit is a check digit. The last digit also indicates whether the person is female og male. An even number is a female – an odd number is a male"	99999999	"8 digits - CVR or SE number.
+“CVR” or “SE” is often placed in front of the number e.g. CVR 99999999 or SE 99999999. In some situations, a company can have both a CVR number and a SE number."
+63	Djibouti	DJ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+64	Dominica	DM	No	No	9999999	The TIN consists of a maximum of six (6) digits and one (1) check digit.	9999999	The TIN consists of a maximum of six (6) digits and one (1) check digit.
+65	Dominican Republic	DO	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+66	Ecuador	EC	No	Yes	"9999999999001, 9999999999001"	"INDIVIDUALS: ECUADORIANS AND FOREIGN RESIDENTS
+Ten digits of the identity or citizenship card: The last three digits are always 001."	"9999999999001, 9969999999001"	"PRIVATE COMPANIES AND NON-RESIDENT FOREIGN INDIVIDUALS (NON-HOLDERS OF A CARD OF IDENTITY OR CITIZENSHIP)
+Two first digits: the code of the province where the RUC was issued. Third digit: it is always 9. From the fourth to the ninth digit: consecutive numbers. Tenth digit: check digit. The last three digits are always 001.
+
+PUBLIC ENTITIES
+Two first digits: the code of the province where the RUC was issued. Third digit: it is always 6. From the fourth to the eighth digit: consecutive numbers. Ninth digit: check digit. Tenth digit: it is always 0. The last three digits are always 001."
+67	Egypt	EG	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+68	El Salvador	SV	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+69	Equatorial Guinea	GQ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+70	Eritrea	ER	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+71	Estonia	EE	Yes	Yes	99999999999	"An Estonian personal identification code consists of 11 digits, generally given without any whitespace or other delimiters. The form is GYYMMDDSSSC, where G shows sex and century of birth (odd number male, even number female, 1-2 19th century, 3-4 20th century, 5-6 21st century), YY is the year of birth, MM is the month of birth and DD is the date of birth, SSS is a serial number separating persons born on the same date and C a checksum."	"99999999, 19999999, 89999999"	"Legal persons registration code consists of 8 numbers. For public limited company, private limited company, general partnership, limited partnership and commercial association the code starts with number 1, for non-profit associations it starts with number 8 and for foundationd with number 9."
+72	Eswatini	SZ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+73	Ethiopia	ET	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+74	Falkland Islands [Malvinas]	FK	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+75	Faroe Islands	FO	Yes	Yes	999999-999	"Physical persons:
+Format Explanation Comment:
+Ddmmyyxxx (ddmmyy-xxx) 9 digits often with a hyphen between 6th and 7th digits
+The Last digit is a check digit and at the same time it indicates whether the person is a male or a female. An odd number indicates a male and an even numbe indicates a female."	999999999	"Legal persons
+The number is a consecutive number."
+76	Fiji	FJ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+77	Finland	FI	Yes	Yes	"999999Y9999, 999999X9999, 999999W9999, 999999V9999, 999999U9999, 999999A9999, 999999B9999, 999999C9999, 999999D9999, 999999E9999, 999999F9999, 999999+9999, 999999-9999, 999999Y999A, 999999X999A, 999999W999A, 999999V999A, 999999U999A, 999999A999A, 999999B999A, 999999C999A, 999999D999A, 999999E999A, 999999F999A, 999999+999A, 999999-999A"	"For Individuals , it consists of 11 characters:
+- 6 digits
+- 1 character which can be + (plus), (minus) or the letter Y, X, W, V, U, A , B, C, D, E, F
+- 3 digits
+- 1 alphanumeric character
+The 7th character (+, - or a letter ) represents the century of birth and cannot be skipped: it shall be duly noted down and reported in all records. Character + means born 1800 1899, character (-) or letter Y, X, W, V, U means born 1900 1999 and letter A , B, C, D, E, F means born in 2000 or after that. These character s have no other meaning."	9999999-9	"For legal persons , it consists of seven digits, a dash and a control mark, i.e. it has the form - 1234567-8."
+78	France	FR	No	Yes	"0999999999999, 1999999999999, 2999999999999, 3999999999999"	"For individuals:
+The TIN consists in 13 numerals (format 99 99 999 999 999). The first digit of the TIN is always 0, 1, 2 or 3. No spaces are expected in filling in the TIN."	"999999999, 99999999999999"	"For entities:
+The numéro SIREN consists in 9 numerals (format 999 999 999).
+The numéro SIRET consists in 14 numerals (format 999 999 999 99999)."
+79	French Guiana	GF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+80	French Polynesia	PF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+81	French Southern Territories	TF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+82	Gabon	GA	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+83	Gambia	GM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+84	Georgia	GE	Yes	Yes	"99999999999, 999999999 "	"For Individuals: Georgian citizen natural persons (including individual entrepreneurs) are assigned the same 11 digit tax identification number as the identification number that is assigned in the national identity card by registering body (Public registry). However, in case of non-citizen natural persons, tax identification number is not assigned automatically and is the 9 digit number, assigned by the registering body (tax authority)."	999999999	For Entities: The taxpayer / enterprise identification number is the 9-digit identification number assigned by the registering body defined by the Georgian legislation (Public registry).
+85	Germany	DE	Yes	No	99999999999	"TINs are comprised of 11 digits: 10 digits plus one check digit.
+TINs are non-descriptive numbers, i.e. they provide no indications as to a taxpayer’s name, gender or other tax-related information."	99999999999	"TINs are comprised of 11 digits: 10 digits plus one check digit.
+TINs are non-descriptive numbers, i.e. they provide no indications as to a taxpayer’s name, gender or other tax-related information."
+86	Ghana	GH	No	No	P0099999999	"The GRA TIN is an 11-digit alpha-numeric number issued individuals who are not eligible for the Ghanacard PIN and entities, each with a unique prefix as follows:
+P00……….For Individuals
+C00………. For Companies limited by guarantee, shares, Unlimited (i.e organisation required to register with
+the RGD)
+G00………. Government Agencies, MDAs
+Q00……….Foreign Missions, Employees of foreign missions
+V00……….Public Institutions, Trusts, Co-operatives, Foreign Shareholder (Offshore),( Entities not
+registered by RGD)"	"C0099999999, G0099999999, Q0099999999, V0099999999"	"The GRA TIN is an 11-digit alpha-numeric number issued individuals who are not eligible for the Ghanacard PIN and entities, each with a unique prefix as follows:
+P00……….For Individuals
+C00………. For Companies limited by guarantee, shares, Unlimited (i.e organisation required to register with
+the RGD)
+G00………. Government Agencies, MDAs
+Q00……….Foreign Missions, Employees of foreign missions
+V00……….Public Institutions, Trusts, Co-operatives, Foreign Shareholder (Offshore),( Entities not registered by RGD)"
+87	Gibraltar	GI	No	No	999999	"Gibraltar’s taxpayer reference numbers (taxpayer identification numbers) consist of numerals only, assigned chronologically."	999999	"Gibraltar’s taxpayer reference numbers (taxpayer identification numbers) consist of numerals only, assigned chronologically."
+88	Greece	GR	No	No	999999999	9 digits	999999999	9 digits
+89	Greenland	GL	Yes	Yes	9999999999	"For natural persons the format of the TIN is a 10 digits structure. From the left it is constructed in the following way:
+the digits in the positions 1-2 indicate the day of birth of the person;
+the digits in the positions 3-4 indicate the months of birth of the person;
+the digits in the positions 5-6 indicate the year of the birth of the person, without indicating the century;
+the digits in the positions 7-10 form a serial number. These digits are often separated from the preceding digits by a hyphen between the 6th and 7th digits."	99999999	For non-natural persons and legal entities the format of the TIN is an 8 digits structure.
+90	Grenada	GD	No	Yes	999999	"This section contains information on the alphanumeric structure of the TIN, the use of slashed, capital letter, hyphens, etc. In addition, please outline here the meaning given to the numbers and letters that make up the TIN (including for instance the use of check digits).
+There is no TIN structure other than the issuing of a six (6) digit unique number."	999999	"This section contains information on the alphanumeric structure of the TIN, the use of slashed, capital letter, hyphens, etc. In addition, please outline here the meaning given to the numbers and letters that make up the TIN (including for instance the use of check digits).
+There is no TIN structure other than the issuing of a six (6) digit unique number."
+91	Guadeloupe	GP	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+92	Guam	GU	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+93	Guatemala	GT	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+94	Guernsey	GG	Yes	No	"GY999999,
+AA999999A, AA999999B, AA999999C, AA999999D, JY999999A"	"For Individuals:
+The TIN is comprised of 6 digits prefixed with GY, for example, GYXXXXXX (where ‘X’ is a digit between 0-9 inclusive).
+Please Note: In some, limited, cases, pre 1979 and the computerisation of records, UK and Jersey contributors who moved permanently to Guernsey were permitted to retain their existing UK/Jersey Insurance Numbers. This is a very small group, but Financial Institutions should be aware it is a potentially valid TIN for Guernsey purposes.
+UK National Insurance Number (“NINO”):
+A UK NINO is made up of two letters, six numbers and a final letter, which is always A,B,C or D e.g; QQ123456A
+Jersey Social Security Number:
+A Jersey Social Security Number is comprised of 6 digits prefixed by “JY” and a final letter e.g.; JY123456A"	"999999, 9A999999, 9A99999A"	"Entities
+Companies – Incorporated in Guernsey
+If the company is incorporated in Guernsey the TIN is the Company Registration Number, as issued by the Guernsey Registry. The Registration numbers start at “1” and increase sequentially. The number is comprised of between one and six digits e.g; X to XXXXXX, where X is a number between 0 and 9.
+Companies – tax resident in Guernsey not incorporated in Guernsey
+If a company is tax resident in Guernsey, but not incorporated in Guernsey, the company’s TIN is the company’s Guernsey tax reference number, which is issued by the Guernsey Revenue Service.
+The format of this number is a single digit followed by a letter, followed by six digits. This will usually, although not always, be followed by a letter suffix e.g. 1C123456/O.
+Partnerships – formed and registered outside of Guernsey
+If the partnership is registered outside of Guernsey but tax resident in Guernsey based on the place of effective management, the TIN is the Tax Reference Number (TRN) as issued by the Guernsey Revenue Service.
+The format of this number is a single digit followed by two letters, followed by six digits. This will usually, although not always, be followed by a letter suffix e.g. 1PP123456/F"
+95	Guinea	GN	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+96	Guinea-Bissau	GW	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+97	Guyana	GY	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+98	Haiti	HT	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+99	Heard Island and McDonald Islands	HM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+100	Holy See	VA	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+101	Honduras	HN	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+102	Hong Kong (China)	HK	Yes	Yes	"A999999A, AA999999A, A9999999, AA9999999, A999999(A), AA999999(A), A999999(9), AA999999(9)"	"Individuals: Hong Kong Identity Card (HKID) number. The HKID is an official identity document issued by the Immigration Department of Hong Kong, China for all residents of age 11 or above (other than those exempted).
+HKID number: The standard format of HKID number is @ 123456(#).
+(a) @ represents any one or two capital letters of the alphabet.
+(b) # is the check digit which has 11 possible values from 0 to 9 and A.
+All the letters and numerals of the HKID number, including the check digit without the bracket, are used as the identifier equivalent to TIN for individuals."	"99999999-999-99-99-9, 99999999"	"Entities: Business Registration (BR) number. The Business Registration Office of Hong Kong, China is responsible for registering businesses carried on by entities. The BR number is a unique number assigned to a business.
+BR number: The BR number comprises 8 numerals at the front of business registration certificate number (e.g. 99999999-&&&-&&-&&-&).
+All the numerals of the BR number are used as the identifier equivalent to TIN for entities."
+103	Hungary	HU	Yes	No	9999999999	"TIN for individuals - 1 block of 10 digits, where:
+digit 1 is always an 8 and indicates that the TIN holder is an individual;
+digits 2-6 are the number of days between the date 01/01/1867 and the date of birth of the individual;
+digits 7-9 is the number generated by chance to differentiate individuals born on the same day;
+digit 10 is the check digit"	"999999-1-99, 999999-2-99"	"TIN for entities and certain Individuals
+Composed of 11 numerical
+characters, where: xxxxxxxx is a block of 8 digits which serves as the unique identifier of the taxpayer;
+y is a so called “VAT code” which indicates whether the taxpayer is registered for VAT purposes (the code is 2) or not (the code is 1);
+zz is the territorial code of the competent tax office in Hungary
+y and zz may change due to change in taxpayer’s circumstances"
+104	Iceland	IS	Yes	Yes	9999999999	"The identification number (TIN) is composed of ten digits.
+For individuals the first six of these digits are the individual’s date of birth in the format DDMMYY. The seventh and eighth digits are random, the ninth is a check digit and the tenth indicates the century of the individual’s birth. The TIN is often written with a hyphen following the sixth digit, e.g. xxxxxx-xxxx.
+D1 D2 M1 M2 Y1 Y2 R1 R2 CM
+D = day, M = Month, Y = year, R = random, C = checksum, M = millennium.
+The check digit equations are:
+C = 11 - ((3xD1 + 2xD2 + 7xM1 + 6xM2 + 5xY1 + 4xY2 + 3xR1 + 2xR2 ) mod 11)
+For entities the same formula is applied. Instead of the date of birth the initial registration date is used and then the number 4 is added to the first digit to make sure that there are no conflicts with individuals."	9999999999	"The identification number (TIN) is composed of ten digits.
+For individuals the first six of these digits are the individual’s date of birth in the format DDMMYY. The seventh and eighth digits are random, the ninth is a check digit and the tenth indicates the century of the individual’s birth. The TIN is often written with a hyphen following the sixth digit, e.g. xxxxxx-xxxx.
+D1 D2 M1 M2 Y1 Y2 R1 R2 CM
+D = day, M = Month, Y = year, R = random, C = checksum, M = millennium.
+The check digit equations are:
+C = 11 - ((3xD1 + 2xD2 + 7xM1 + 6xM2 + 5xY1 + 4xY2 + 3xR1 + 2xR2 ) mod 11)
+For entities the same formula is applied. Instead of the date of birth the initial registration date is used and then the number 4 is added to the first digit to make sure that there are no conflicts with individuals."
+105	India	IN	No	No	AAAPA9999A	"A typical PAN is AFZPK7190K.
+First three characters i.e. ""AFZ"" in the above PAN are alphabetic series running from
+AAA to ZZZ
+Fourth character of PAN represents the status of PAN holder i.e. ""P"" in the above PAN represents the status of the PAN holder.
+""P"" stands for Individual, ""F"" stands for Firm,
+""C"" stands for Company, ""H"" stands for HUF,
+""A"" stands for AOP, ""T"" stands for TRUST
+“B” stands for Body of Individuals
+“L” stands for Local Authority
+“J” stands for Artificial Juridical Person
+“G” stands for Government
+Fifth character i.e. ""K"" in the above PAN represents first character of the PAN holder's last name/surname.
+Next four characters i.e. ""7190"" in the above PAN are sequential number running from 0001 to 9999. Last character i.e. ""K"" in the above PAN is an alphabetic check digit."	AAAAA9999A	"A typical PAN is AFZPK7190K.
+First three characters i.e. ""AFZ"" in the above PAN are alphabetic series running from
+AAA to ZZZ
+Fourth character of PAN represents the status of PAN holder i.e. ""P"" in the above PAN represents the status of the PAN holder.
+""P"" stands for Individual, ""F"" stands for Firm,
+""C"" stands for Company, ""H"" stands for HUF,
+""A"" stands for AOP, ""T"" stands for TRUST
+“B” stands for Body of Individuals
+“L” stands for Local Authority
+“J” stands for Artificial Juridical Person
+“G” stands for Government
+Fifth character i.e. ""K"" in the above PAN represents first character of the PAN holder's last name/surname.
+Next four characters i.e. ""7190"" in the above PAN are sequential number running from 0001 to 9999. Last character i.e. ""K"" in the above PAN is an alphabetic check digit."
+106	Indonesia	ID	No	No	"9999999999999999, 999999999999999"	"For Individual Taxpayer who is an Indonesian Resident
+Starting from 14 July 2022, the NPWP structure comprises of 16-digit numerals only.
+The 16-digit NPWP is the individual taxpayer’s national identity number (Nomor Induk Kependudukan/NIK) issued by the Government of the Republic of Indonesia.
+The previous 15-digit NPWP format is valid until 31 December 2023.
+For Individual Taxpayer who is not an Indonesian Resident, Corporate Taxpayer and Government Agency Taxpayer
+Starting from 14 July 2022, the NPWP structure comprises of 16-digit numerals only.
+The 16-digit NPWP is a unique set of numbers issued by the Directorate General of Taxes.
+For those registered before 14 July 2022, the 16-digit NPWP is “0” (zero) followed by the previous 15-digit NPWP format."	"9999999999999999, 999999999999999"	"For Individual Taxpayer who is an Indonesian Resident
+Starting from 14 July 2022, the NPWP structure comprises of 16-digit numerals only.
+The 16-digit NPWP is the individual taxpayer’s national identity number (Nomor Induk Kependudukan/NIK) issued by the Government of the Republic of Indonesia.
+The previous 15-digit NPWP format is valid until 31 December 2023.
+For Individual Taxpayer who is not an Indonesian Resident, Corporate Taxpayer and Government Agency Taxpayer
+Starting from 14 July 2022, the NPWP structure comprises of 16-digit numerals only.
+The 16-digit NPWP is a unique set of numbers issued by the Directorate General of Taxes.
+For those registered before 14 July 2022, the 16-digit NPWP is “0” (zero) followed by the previous 15-digit NPWP format."
+107	Iran (Islamic Republic of)	IR	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+108	Iraq	IQ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+109	Ireland	IE	Yes	No	"9999999A, 9999999AA"	"TRN (both natural and non natural persons):
+Explanation: 7 digits + either 1 or 2 letters.
+Comment: There can be one or two letters at the end of the digit sequence and there is no
+restriction on the letters used."	"9999999A, 9999999AA"	"TRN (both natural and non natural persons):
+Explanation: 7 digits + either 1 or 2 letters.
+Comment: There can be one or two letters at the end of the digit sequence and there is no
+restriction on the letters used."
+110	Isle of Man	IM	Yes	Yes	"H999999-99, 
+AA999999A, AA999999B, AA999999C, AA999999D"	"All Tax Reference Numbers consist of one letter and six numbers followed by a hyphen and a two digit suffix.
+Individual Tax Reference Numbers are prefixed with the letter ‘H’, Companies (including Limited Liability Companies – LLCs) ‘C’, Trusts, Foundations and Partnerships (including Limited Liability Partnerships - LLPs) ‘X’.
+The use of the two digit suffix is in all instances optional and a Tax Reference Number not including the suffix will be considered acceptable (for example C222222).
+Examples:
+Individual H111111-11; Company C333333-33; Trust X555555-55 
+The other reference that can be used in the Isle of Man, for individuals, is their National
+Insurance Number (NINO).
+All individuals of working age (16-65) in employment are required to have a NINO which is issued either by the Isle of Man Income Tax Division or His Majesty’s Revenue & Customs (HMRC) if the person has lived and worked in the UK prior to residing in the Isle of Man. 
+NINO consist of two letters, six numbers and a suffix letter, A, B, C or D.
+Example: MA999999A"	"C999999-99, X999999-99"	"All Tax Reference Numbers consist of one letter and six numbers followed by a hyphen and a two digit suffix.
+Individual Tax Reference Numbers are prefixed with the letter ‘H’, Companies (including Limited Liability Companies – LLCs) ‘C’, Trusts, Foundations and Partnerships (including Limited Liability Partnerships - LLPs) ‘X’.
+The use of the two digit suffix is in all instances optional and a Tax Reference Number not including the suffix will be considered acceptable (for example C222222).
+Examples:
+Company C333333-33
+Trust X555555-55 "
+111	Israel	IL	Yes	Yes	999999999	"The ""TIN"" for an Individual is his ID number.
+The Israeli TIN structure for a company / an individual includes only 9 numeric characters"		"For companies – numbers, without special meaning.
+The Israeli TIN structure for a company / an individual includes only 9 numeric characters"
+112	Italy	IT	Yes	No	AAAAAA99A99A999A	"For Individuals (Codice Fiscale): 16 characters. It encodes your personal data—the first 6 letters represent your surname and name, followed by digits/letters for your birth year, birth month, birth day (with 40 added for women), place of birth, and a final control character."	99999999999	"For Businesses (Partita IVA): 11 digits. The first 7 represent a serial number, the next 3 indicate the province of registration, and the final digit is a check number"
+113	Jamaica	JM	No	No	199999999	"Jamaica’s TRN consists of nine (9) numeric digits randomly generated and managed by a system which contains particular rules and restrictions. Currently, the first of the nine (9) digits for an individual is a “1” whilst for organizations it is a “0”"	099999999	"Jamaica’s TRN consists of nine (9) numeric digits randomly generated and managed by a system which contains particular rules and restrictions. Currently, the first of the nine (9) digits for an individual is a “1” whilst for organizations it is a “0”"
+114	Japan	JP	Yes	No	999999999999	Individual Number is 12-digit number comprised of numerals only.	9999999999999	"Corporate Number is 13-digit numbers comprised of numerals only. If a corporation registered its establishment based on the Companies Act (Law No. 86 of 2005) or other laws or ordinances (establishment-registered corporation), its number is its Company, etc., Number (12 digits) that was issued based on the Commercial Registration Act (Law No.125 of 1963) plus a one-digit examination numeral added to the front"
+115	Jersey	JE	Yes	No	"999-999-9999, AA999999A"	"The taxpayer identification number for Jersey resident individuals and entities will be the 10-digit unique number which is used to identify taxpayers to Revenue Jersey. An example of a Jersey TIN is 100-100-1000.
+Social security numbers for individuals beginning with two letters, usually JY, followed by six digits and a letter are also accepted as a form of valid identification number. For example, JY000000A"	"999-999-9999, AA99999"	"Entities and other legal arrangements issued with a taxpayer identification number in the previous format (two letters followed by up to five digits, for example CC00000) could also continue using that TIN to the extent a new one had not been issued."
+116	Jordan	JO	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+117	Kazakhstan	KZ	Yes	Yes	999999999999	Individual identification number (hereinafter - IIN) is a unique combination of 12 digits generated for an individual during the initial registration in the information-production system for producing documents. IIN is formed automatically taking into account the principles of uniqueness and immutability. 	999999999999	Business - identification number (hereinafter - BIN) - contains 12 digits 
+118	Kenya	KE	Yes	No	P999999999A	"The TIN should always be capital letters and No hyphens.
+TIN should have 11 digits. The first and last digits are letters and the others are numbers.
+Entities TIN starts with letter P and Individual TIN starts with letter A. For example, an entity TIN shall present as P123456789X while an individual TIN shall present as A123456789X"	A999999999A	"The TIN should always be capital letters and No hyphens.
+TIN should have 11 digits. The first and last digits are letters and the others are numbers.
+Entities TIN starts with letter P and Individual TIN starts with letter A. For example, an entity TIN shall present as P123456789X while an individual TIN shall present as A123456789X"
+119	Kiribati	KI	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+120	Korea	KR	Yes	Yes	"999999-9999999, A999A9999, A99999999"	"A Resident Registration Number consists of 13 digits (XXXXXX-XXXXXXX)
+For the purpose of CRS reporting, A Passport Number is also admitted as a TIN in the
+Passport issued by the Ministry of Foreign Affairs."	"999-99-99999, 999999-9999999"	"A Business Registration Number consists of 10 digits.
+ - TIN structure : XXX-XX-XXXXX
+A Corporation Registration Number consists of 13 digits.
+ - TIN structure : XXXXXX-XXXXXXX."
+121	Korea (the Democratic People's Republic of)	KP	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+122	Kuwait	KW	No	Yes	999999999999	"Individuals: Their 12-digit Civil ID numbers issued by the Public Authority for Civil Information (PACI) which contains the person’s date of birth.
+Individuals: Their Civil ID numbers can be found on the individual’s Civil ID cards, and for
+Kuwaiti nationals, can also be found on the photo page of their passports. Also, it can also be found on Tax Certificates issued by the Tax Dept. for individuals"	999999	"Entities: A 6-digit number issued by the Tax Dept. which can be found on Tax Certificates
+issued for entities"
+123	Kyrgyzstan	KG	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+124	Lao People's Democratic Republic	LA	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+125	Latvia	LV	Yes	Yes	"99999999999, 999999-99999"	TIN for individuals and entities consists of 11 digits. 	"99999999999, 999999-99999"	TIN for individuals and entities consists of 11 digits. 
+126	Lebanon	LB	No	Yes	99-999999999-9	"The TINs are given based on numerical serial without the use of any letters,
+Yet the TIN for entities registered in VAT are followed by a dash and a code (601 for the taxpayers subject to VAT, 603 and 604 for refund purposes...)
+
+Generic Schema: XX-XXXXXXXXX-X"	99-999999999-999	"Corporations, partnerships, and public institutions use a longer format to accommodate Value Added Tax (VAT) file structures.Generic Schema: XX-XXXXXXXXX-6XX"
+127	Lesotho	LS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+128	Liberia	LR	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+129	Libya	LY	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+130	Liechtenstein	LI	Yes	Yes	"9999, 99999, 999999, 9999999, 99999999, 999999999, 9999999999, 99999999999, 999999999999"	"In Liechtenstein, the Tax Identification Number (TIN) is officially called the PEID (Personenidentifikationsnummer). It is a continuous string of 4 to 12 numeric digits without any letters, dashes, or country codes.Detailed Structure Format: 999999999999 (a simple sequence of up to 12 numbers). Length: Between 4 and 12 digits."	"9999, 99999, 999999, 9999999, 99999999, 999999999, 9999999999, 99999999999, 999999999999"	"In Liechtenstein, the Tax Identification Number (TIN) is officially called the PEID (Personenidentifikationsnummer). It is a continuous string of 4 to 12 numeric digits without any letters, dashes, or country codes.Detailed Structure Format: 999999999999 (a simple sequence of up to 12 numbers). Length: Between 4 and 12 digits."
+131	Lithuania	LT	Yes	Yes	99999999999	"Natural persons:
+In Lithuania the TIN equals the Lithuanian personal code. This code is immutable throughout the life of the natural person. (11 digits)"	999999999	"Non-natural persons / companies:
+In Lithuania the TIN equals the code the Lithuanian legal entity code.
+All legal entities registered in the Register of Legal Entities are assigned a legal entity code. This code is immutable throughout the life cycle of the legal entity. The legal entity code must be printed in the legal entity's official documents. (9 digits)"
+132	Luxembourg	LU	Yes	Yes	9999999999999	"Structure and syntax of Luxembourg TIN-like numbers for natural persons:
+The identification number has 13 digits (9999999999999), the 2 last digits are check digits. The 12 th digit is a check digit calculated on the basis of the algorithm “de Luhn 10”, calculated on the 11 first digits.
+The 13th digit is a check digit calculated on the basis of the algorithm “de Verhoeff”, calculated on the 11 first digits."	99999999999	"Structure and syntax of Luxembourg TIN-like numbers for non-natural persons:
+The identifier has 11 digits (99999999999), the last digit is a check digit.
+The 11th digit corresponds to the difference between 11 and the remainder of the division by 11 of the sum of the products obtained by multiplying each of the first 10 digits of the ID number by the respective factors of 5, 4, 3, 2, 7, 6, 5, 4, 3 and 2, being understood that of the numbers generated, during the abovementioned division, a remainder of 1 is not allocated. A remainder of zero during that division is the check digit."
+133	Macau (China)	MO	No	No	09999999	"For individuals who are Macao residents working as self-employed professionals like doctors, dentist, accountants or working as employees, they are subject to pay salary tax and the taxpayer numbers assigned will be same as their ID numbers.
+For individuals who are Macao residents involving in commercial purposes, they are subject to industrial and profits taxes and the taxpayer numbers assigned will be in 8 digit numbers starting with the number “0” in front."	89999999	"Entities/Individuals having business activities or commercial purposes have to conduct tax registrations in Financial Services Bureau. And through tax registration, taxpayer numbers will be assigned to entities/individuals.
+For entities conducting commercial purposes in Macao are subject to industrial and profit taxes and the taxpayer numbers assigned will be in 8 digit numbers starting with the number “8” in front."
+134	Madagascar	MG	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+135	Malawi	MW	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+136	Malaysia	MY	No	No	"IG999999999, IG9999999999, IG99999999999, SG999999999, SG9999999999, SG99999999999,OG999999999, OG9999999999, OG99999999999, 999999999999"	"In Malaysia, both individuals and entities who are registered taxpayers with the Inland Revenue Board of Malaysia (IRBM) are assigned with a Tax Identification Number (TIN) known as “Nombor Pengenalan Cukai”.
+TIN will be issued to all Malaysian citizens who attained the age of 18 years old and above.
+For the purposes of the CRS, in the absence of TIN or if an account holder fails to provide the financial institution with the TIN for whatever reason, a functional equivalent would be in relation to individual, is the Malaysian National Registration Identity Card Number (NRIC Number). The NRIC Number is a unique 12-digit number issued to Malaysian citizens and permanent residents and is used by the IRBM to identify its taxpayers.
+NRIC Number - The format of the NRIC Number features 12 digits appears on the Malaysian Passport."	"A9999999999, AA9999999999, A99999999999, AA99999999999, A999999999, AA999999999"	"In Malaysia, both individuals and entities who are registered taxpayers with the Inland Revenue Board of Malaysia (IRBM) are assigned with a Tax Identification Number (TIN) known as “Nombor Pengenalan Cukai”.
+TIN will be issued to all Malaysian citizens who attained the age of 18 years old and above.
+For the purposes of the CRS, in the absence of TIN or if an account holder fails to provide the financial institution with the TIN for whatever reason, a functional equivalent would be in relation to individual, is the Malaysian National Registration Identity Card Number (NRIC Number). The NRIC Number is a unique 12-digit number issued to Malaysian citizens and permanent residents and is used by the IRBM to identify its taxpayers.
+NRIC Number - The format of the NRIC Number features 12 digits appears on the Malaysian Passport."
+137	Maldives	MV	No	Yes	9999999AAA999	"In MIRA, TIN’s are issued to all Individuals and entities who are required to register with MIRA. This is considered the taxpayer level. So for each taxpayer MIRA issues a unique 7 digit identifier. This is referred to as business partner number. Based on each tax registration
+MIRA will issue another unique registration as per the below format:
+{BP}{Revenue Code}{incrementing Number}
+For example “Taxpayer A” might have the business partner: 1000001. When the taxpayer registers for GST they will get the TIN 1000001GST501. If the taxpayer registers for Green tax they will get the TIN 1000001GRT001, and so on.
+The first 7 digits remain unique and the revenue code and sequence number is appended creating a TIN based on the taxes for which the taxpayer is registered under."	9999999AAA999	"In MIRA, TIN’s are issued to all Individuals and entities who are required to register with MIRA. This is considered the taxpayer level. So for each taxpayer MIRA issues a unique 7 digit identifier. This is referred to as business partner number. Based on each tax registration
+MIRA will issue another unique registration as per the below format:
+{BP}{Revenue Code}{incrementing Number}
+For example “Taxpayer A” might have the business partner: 1000001. When the taxpayer registers for GST they will get the TIN 1000001GST501. If the taxpayer registers for Green tax they will get the TIN 1000001GRT001, and so on.
+The first 7 digits remain unique and the revenue code and sequence number is appended creating a TIN based on the taxes for which the taxpayer is registered under."
+138	Mali	ML	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+139	Malta	MT	Yes	Yes	"9999999A, 999999999"	"8 characters: - 7 digits - 1 letter (M, G, A, P, L, H, B, Z)
+Individuals who are Maltese nationals -
+Note 1: the first 4 digits may be omitted when they are 0 (zero);
+Note 2: in the case of IT processing, the length of this TIN must always be 8 characters; the first 0 (zero) must thus always be recorded.
+9 digits - Individuals who are not Maltese nationals."	999999999	9 digits- Entities resident in Malta for tax purposes.
+140	Marshall Islands	MH	No	No	"04-999999, 99999-04"	"The Republic of the Marshall Islands (RMI) does not issue TINs, but uses the employer identification numbers (EINs) issued by the Marshall Islands Social Security Administration (MISSA) to identify or register all taxpayers, including both employers and employees. Every employer operating in the RMI is required to apply to MISSA for an EIN. Every employee working in the RMI is required to apply to MISSA for a personal social security number (SSN) or employee identification number.
+
+The EIN always starts with a five digit number and always ends with “04” with a dash sign in between the numbers, e.g., 08612-04. The employee identification number always starts with “04” and always ends with a six digit number with a dash sign in between the numbers, e.g., 04-086123.
+The “04” is a code for the Marshall Islands assigned by the United States (US) to all the freely associated states with the US. Different islands are assigned with different numbers such as; 01, 02, 03, etc. to identify them separately."	"04-999999, 99999-04"	"The Republic of the Marshall Islands (RMI) does not issue TINs, but uses the employer identification numbers (EINs) issued by the Marshall Islands Social Security Administration (MISSA) to identify or register all taxpayers, including both employers and employees. Every employer operating in the RMI is required to apply to MISSA for an EIN. Every employee working in the RMI is required to apply to MISSA for a personal social security number (SSN) or employee identification number.
+
+The EIN always starts with a five digit number and always ends with “04” with a dash sign in between the numbers, e.g., 08612-04. The employee identification number always starts with “04” and always ends with a six digit number with a dash sign in between the numbers, e.g., 04-086123.
+The “04” is a code for the Marshall Islands assigned by the United States (US) to all the freely associated states with the US. Different islands are assigned with different numbers such as; 01, 02, 03, etc. to identify them separately."
+141	Martinique	MQ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+142	Mauritania	MR	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+143	Mauritius	MU	No	Yes	"19999999, 59999999, 79999999, 89999999"	"For individuals: The TAN consists of 8 numerals (format: 99999999). The first digit of the TAN is always 1, 5, 7 or 8."	"29999999, 39999999"	For entities: The TAN consists of 8 numerals (format 99999999). ). The first digit of the TAN is always 2 or 3.
+144	Mayotte	YT	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+145	Mexico	MX	No	No	"AAAA999999A99, AAAA999999AA9, AAAA9999999A9, AAAA9999999AA, AAAA999999A9A, AAAA99999999A"	"For individuals, it consists of 13 characters (4 letters followed by 6 digits and 3 alphanumeric characters) and for legal entities (and certain legal arrangements), it consists of 12 characters (3 letters followed by 6 digits and 3 alphanumeric characters). The first letters (4 or 3, respectively) belong to the name, the next 6 digits are the date of birth or date of incorporation, and the last 3 (or 2, for legal entities) belong to the check digits (homoclave)"	"AAA999999A99, AAA999999AA9, AAA9999999A9, AAA9999999AA, AAA999999A9A, AAA99999999A"	"For individuals, it consists of 13 characters (4 letters followed by 6 digits and 3 alphanumeric characters) and for legal entities (and certain legal arrangements), it consists of 12 characters (3 letters followed by 6 digits and 3 alphanumeric characters). The first letters (4 or 3, respectively) belong to the name, the next 6 digits are the date of birth or date of incorporation, and the last 3 (or 2, for legal entities) belong to the check digits (homoclave)"
+146	Micronesia (Federated States of)	FM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+147	Moldova	MD	Yes	No	2999999999999	"IDNP (Identification Number of Person) is the basic identification index of the natural person, which represents a series of 13 digits, arranged in a strict order, in which:
+IDNP: 2ITTXXXYYYYYK
+2 - the identification index of the natural person in the multitude of state identifiers;
+ITT- the last three digits of the IDNP award year.;
+XXX- code of the registrar's office;
+YYYYY- the order number of the registration in the respective year in the respective office;
+K - check digit (special algorithm)."	1999999999999	"IDNO (Identification Number of Organization) is the main identification index of the legal entity, represented by a strictly ordered series of 13 digits, of which:
+IDNO: 1XXXYYYZZZZZK
+1- the index of the identification number of the legal unit, the number of the general compartment to which the object of identification refers;
+XXX- the last three digits of the year in which the identification number was granted;
+YYY- the code of the authority (office), which registered the legal unit;
+ZZZZZ- the order number of the registration in that year in the office in question;
+K - check digit."
+148	Monaco	MC	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+149	Mongolia	MN	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+150	Montenegro	ME	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+151	Montserrat	MS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+152	Morocco	MA	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+153	Mozambique	MZ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+154	Myanmar	MM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+155	Namibia	NA	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+156	Nauru	NR	No	No	999-999-999	Each TIN which NTRD generates a tax unique number consisting of 9 unique software generated numbers– E.G. 123-456-789	999-999-999	Each TIN which NTRD generates a tax unique number consisting of 9 unique software generated numbers– E.G. 123-456-789
+157	Nepal	NP	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+158	Netherlands	NL	Yes	Yes	999999999	The Dutch TIN has 9 digits: 999999999.	999999999	The Dutch TIN has 9 digits: 999999999.
+159	New Caledonia	NC	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+160	New Zealand	NZ	No	No	"999-999-999, 99-999-999, "	"Depending on age of the IRD number the format is either an eight or nine digit number in the format 99-999-999 or 999-999-999.
+The IRD number consisting of the following parts:
+• A seven or eight digit base number
+• A trailing check digit.
+It is increasingly common to add a 0 to the eight digit numbers to make it nine digits long, ie 099-999-999."	"999-999-999, 99-999-999, "	"Depending on age of the IRD number the format is either an eight or nine digit number in the format 99-999-999 or 999-999-999.
+The IRD number consisting of the following parts:
+• A seven or eight digit base number
+• A trailing check digit.
+It is increasingly common to add a 0 to the eight digit numbers to make it nine digits long, ie 099-999-999."
+161	Nicaragua	NI	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+162	Niger	NE	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+163	Nigeria	NG	Yes	Yes	"99999999-0001, 9999999999,  9999999999999"	"TIN issued by the FIRS comprises of numerical values with a hyphen. The structure is eight digits, a hyphen then the 0001 e.g., 12345678-0001 while that of the JTB is purely numerical and contains 10 digits.
+
+Nigeria currently operates a harmonised national Tax Identification Number, generally called the Tax ID. From 1 January 2026, the new national Tax ID is a 13-digit numeric identifier and applies to both:
+Individuals, including Nigerian residents and taxable persons; and
+Non-individuals, including companies, business names, partnerships, incorporated trustees, associations and other organisations."	"99999999-0001, 9999999999,  9999999999999"	"TIN issued by the FIRS comprises of numerical values with a hyphen. The structure is eight digits, a hyphen then the 0001 e.g., 12345678-0001 while that of the JTB is purely numerical and contains 10 digits.
+
+Nigeria currently operates a harmonised national Tax Identification Number, generally called the Tax ID. From 1 January 2026, the new national Tax ID is a 13-digit numeric identifier and applies to both:
+Individuals, including Nigerian residents and taxable persons; and
+Non-individuals, including companies, business names, partnerships, incorporated trustees, associations and other organisations."
+164	Niue	NU	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+165	Norfolk Island	NF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+166	North Macedonia	MK	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+167	Northern Mariana Islands	MP	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+168	Norway	NO	Yes	Yes	99999999999	"The national identity number consists of 11 digits. The first six digits represent the date of birth in the order day, month, year. The next three digits are an individual number, the third digit of which indicates gender – even numbers for women and odd numbers for men. The last two digits are control digits"	"999999999, 999999999AAA"	"The organisation number (TIN) is a nine digit number. The technical construction of the number specifies that the first digit must always be either 8 or 9, with a modulus 11 check digit at the end. According the Central Coordination Register's website, the weighting factors are 3, 2, 7, 6, 5, 4, 3 and 2 calculated from the first digit. The digits are thus multiplied by the weighting factors and the product sum divided by 11. The leftover from the division is subtracted by 11 and the result becomes the check digit.
+Legal entities which are registered in the Value Added Tax Register are required to add the letters MVA as a suffix to the organisation number. The format of the TIN thus becomes:
+Format & Explanation
+999999999 - Legal entity
+999999999LLL - VAT registered legal entity"
+169	Oman	OM	No	Yes	"9, 99, 999, 9999, 99999, 999999, 9999999"	Up to seven-digit numeric sequence {xxxxxxx}	"9, 99, 999, 9999, 99999, 999999, 9999999"	Up to seven-digit numeric sequence {xxxxxxx}
+170	Pakistan	PK	No	No	"99999-999999-9, AA9999999, A9999999"	"CNIC number is a 13 digit (XXXXX-XXXXXX-X), which may be broken down into following:
+a. 1st digit: The very first digit of a CNIC number shows the province e.g. in the example below 3 tells that the holder of the CNIC belongs to Punjab province.
+i. 1 for KPK
+ii. 2 for FATA
+iii. 3 for Punjab
+iv. 4 for Sindh
+v. 5 for Balochistan
+vi. 6 for Islamabad
+vii. 7 for Gilgit Baltistan
+b. 2nd digit: The second digit represents the division.
+c. 3rd digit: It shows the district of the division.
+d. 4th digit: The fourth digit is for the tehsil (sub-district).
+e. 5th digit: The fifth digit is for union council number.
+f. Next 7 digits: Next seven digits (between the two dashes) are family number and these are unique for every family. All family members are linked to each other in blood relationships; all of these individuals are determined by the same middle code. A family tree is also formed by the same code.
+g. Last digit: At last, there is any number from 1- 9. Here odd numbers (i.e. 1,3,5,7,9) shows that the holder is a male while even numbers (i.e. 2,4,6,8) shows that the holder is a female.
+
+In case of non-resident individuals that do not have CNIC, passport number is used as NTN or Registration Number"	9999999	NTN or Registration Number for AOP and Company is the 7 digits NTN received after e-enrollment
+171	Palau	PW	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+172	"Palestine, State of"	PS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+173	Panama	PA	No	No	"9-99-999, 9-99-9999, 9-999-999, 9-999-9999, 99-99-999, 99-99-9999, 99-999-999, 99-999-9999, PE-9-999, PE-9-9999, PE-99-999, PE-99-9999, PE-999-999, PE-999-9999, A-9-999, A-9-9999, A-99-999, A-99-9999, A-999-999, A-999-9999, AA-9-999, AA-9-9999, AA-99-999, AA-99-9999, AA-999-999, AA-999-9999, 9-NT-9-9, 9-NT-9-99, 9-NT-9-999, 9-NT-9-9999, 9-NT-99-9, 9-NT-99-99, 9-NT-99-999, 9-NT-99-9999, 9-NT-999-9, 9-NT-999-99, 9-NT-999-999, 9-NT-999-9999, 99-NT-9-9, 99-NT-9-99, 99-NT-9-999, 99-NT-9-9999, 99-NT-99-9, 99-NT-99-99, 99-NT-99-999, 99-NT-99-9999, 99-NT-999-9, 99-NT-999-99, 99-NT-999-999, 99-NT-999-9999"	"Natural Person: Consists of the number of the holder’s personal identity card with an assigned DV.
+For example: 8-100-678 DV: 90
+The first number identifies the province or region (1-13) of birth of the taxpayer.
+There can be different lengths for a Natural Person´s RUC. According to the structure, you may have RUCs for natural persons that can have up to 5, 6, 7, 8 or even more characters in the future. RUC structures can be as follows:
+[1 to 2 digits] – [1 to 4 digits] – [1 to 4 digits] 
+
+The RUC for foreigners residing in Panama corresponds to the Tax Number, assigned by the DGI
+and identified with the letters NT.
+For example: 3-NT-3-33 DV: 45"	"99999-9-99999, 99999-9-999999, 99999-99-99999, 99999-99-999999, 999999-9-99999, 999999-9-999999, 999999-99-99999, 999999-99-999999, 9999999-9-99999, 9999999-9-999999, 9999999-99-99999, 9999999-99-999999, 999-999-999, 999-999-9999, 999-9999-999, 999-9999-9999, 999-99999-999, 999-99999-9999, 9999-999-999, 9999-999-9999, 9999-9999-999, 9999-9999-9999, 9999-99999-999, 9999-99999-9999, 99999-999-999, 99999-999-9999, 99999-9999-999, 99999-9999-9999, 99999-99999-999, 99999-99999-9999, 9-NT-9-9, 9-NT-9-99, 9-NT-9-999, 9-NT-9-9999, 9-NT-99-9, 9-NT-99-99, 9-NT-99-999, 9-NT-99-9999, 9-NT-999-9, 9-NT-999-99, 9-NT-999-999, 9-NT-999-9999, 99-NT-9-9, 99-NT-9-99, 99-NT-9-999, 99-NT-9-9999, 99-NT-99-9, 99-NT-99-99, 99-NT-99-999, 99-NT-99-9999, 99-NT-999-9, 99-NT-999-99, 99-NT-999-999, 99-NT-999-9999"	"Legal Person: Consists of the registration number in the Public Registry with an assigned DV. For older companies, registered before 1985, the entry consists of numbers, periods, letters, and/or other characters. In these cases, the RUC number should be registered using only the numerical digits that compose it.
+For example: 4789-321-1515 DV: 85
+The new structure of the RUC (as of Q3 2014) is Real Folio-2-YYYY or Real Folio-3-YYYY depending on the type of company since there are two consecutives after the FOLIO, one for Commercial Companies (2) and another for Non-Commercial Companies (3), being YYYY the year of registration of the company.
+The Real Folio-2-YYYY structure will apply to the following types of companies:
+Limited liability
+Anonymous society
+Limited Partnership by Shares
+Simple Limited Partnership
+Branches or Agencies of Foreign Companies
+Collective Societies
+For example: 155986022-2-2019 DV: 12
+The Real Folio-3-YYYY structure will apply to the following types of companies:
+Private Interest Foundations
+Non-profit Associations
+Civil Partnerships 
+For example: 26631254-3-2020 DV: 78"
+174	Papua New Guinea	PG	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+175	Paraguay	PY	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+176	Peru	PE	Yes	Yes	"10999999999, 15999999999"	"RUC consists of an 11-digit number.
+The number is structured as follows:
+(a) Individuals identified with DNI: Prefix 10 + DNI + verification digit.
+b) Individuals identified with another type of identity document: Prefix 15 + random number + verification digit.
+c) Legal entities: Prefix 20 + random number + verification digit."	20999999999	"RUC consists of an 11-digit number.
+The number is structured as follows:
+(a) Individuals identified with DNI: Prefix 10 + DNI + verification digit.
+b) Individuals identified with another type of identity document: Prefix 15 + random number + verification digit.
+c) Legal entities: Prefix 20 + random number + verification digit."
+177	Philippines	PH	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+178	Pitcairn	PN	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+179	Poland	PL	No	Yes	"99999999999, 9999999999"	"PESEL — 11 numeric digits, used as the tax identifier for eligible individuals who:
+Have a PESEL;
+Do not conduct business activity;
+Are not registered VAT taxpayers; and
+Are not tax/social or health-insurance contribution remitters.
+NIP — 10 numeric digits, used by:
+Individuals conducting business;
+VAT-registered individuals;
+Tax or social-insurance remitters;
+Legal persons;
+Organisational units without legal personality; and
+Other entities subject to Polish tax-registration requirements."	"99999999999, 9999999999"	"PESEL — 11 numeric digits, used as the tax identifier for eligible individuals who:
+Have a PESEL;
+Do not conduct business activity;
+Are not registered VAT taxpayers; and
+Are not tax/social or health-insurance contribution remitters.
+NIP — 10 numeric digits, used by:
+Individuals conducting business;
+VAT-registered individuals;
+Tax or social-insurance remitters;
+Legal persons;
+Organisational units without legal personality; and
+Other entities subject to Polish tax-registration requirements."
+180	Portugal	PT	Yes	Yes	"199999999, 299999999, 399999999, 459999999"	The structure of the numbering System consists by 9 sequential digits with a control digit	999999999	The structure of the numbering System consists by 9 sequential digits with a control digit
+181	Puerto Rico	PR	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+182	Qatar	QA	No	No	"99999999999, 5999999999"	"In the case of individuals and entities under the jurisdiction of the GTA:
+The TIN consists of 10 digits. It begins with the number 5 which refers to the State of Qatar as a member of the Cooperation Council for the Arab States of the Gulf or Gulf Cooperation Council (GCC).
+The following 9 digits are generated by an algorithm. They include a check digit.
+2. In the case of entities under the jurisdiction of QFCA:
+In the case The TIN structure is T00000 – where the 0s represent the QFC License Number of the firms. Thus, QFC firm with License Number 00001 has T00001 as TIN"	"5999999999, T99999"	"In the case of individuals and entities under the jurisdiction of the GTA:
+The TIN consists of 10 digits. It begins with the number 5 which refers to the State of Qatar as a member of the Cooperation Council for the Arab States of the Gulf or Gulf Cooperation Council (GCC).
+The following 9 digits are generated by an algorithm. They include a check digit.
+2. In the case of entities under the jurisdiction of QFCA:
+In the case The TIN structure is T00000 – where the 0s represent the QFC License Number of the firms. Thus, QFC firm with License Number 00001 has T00001 as TIN"
+183	Réunion	RE	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+184	Romania	RO	Yes	Yes	9999999999999	"A. Personal Code (CNP): Represents a significant number that uniquely individualizesanindividual. It is assigned to natural persons born in Romania and to foreignresidentsregistered in Romania. The first digit represents the sex of the person: ""1"" or ""2"", maleorfemale, for persons born between 1900 and 1999, ""3"" or ""4"" for persons born between1800and 1899, ""5"" or ""6"" for persons born between 2000 and 2099, ""7"" or ""8"", foreignpersonsresident in Romania. Following is a set of 6 digits that represent the year, monthanddayofbirth of the holder of the identity card. Next 2 digits represent the county or district codeandcan only take the values 01 to 47, 51 and 52, 70 or 80 to 83. The last 4 digits represent aunique assigned number. 
+
+B. Tax identification number (NIF): National Agency for Fiscal Administration(ANAF)inRomania issues NIF for non-resident individuals in Romania. NIF is issued bytheTaxAdministration and an be used only for tax purposes. The first digit of it is always ""9""."	"99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999, 9999999999"	The Romanian CUI/CIF has a variable length of 2 to 10 numeric digits.
+185	Russian Federation	RU	Yes	Yes	999999999999	"For individuals it is a twelve-digit code
+The INN is generated as a digital code comprised of a sequence of digits which characterize:
+1) NNNN (4 digits)
+For Russian organizations and individuals – code of the tax authority which assigned the INN.
+For foreign organizations – index defined by the Federal Tax Service.
+2) XXXXX (XXXXXX)
+For Russian organizations (individuals) – a sequence number of the person’s entry in the territorial section of the Unified State Register of Taxpayers (USRT). It consists of 5 digits in case of organizations and 6 digits in case of individuals.
+For foreign organizations – code of foreign organization according to the reference book “Foreign Companies Coding”.
+3) C (CC) – control number (1 digit for organization, 2 digits for individuals)
+It is generated according to a unique algorithm set by the Federal Tax Service."	"9999999999, 9909999999"	"For businesses it is a ten-digit code
+The INN is generated as a digital code comprised of a sequence of digits which characterize:
+1) NNNN (4 digits)
+For Russian organizations and individuals – code of the tax authority which assigned the INN.
+For foreign organizations – index defined by the Federal Tax Service.
+2) XXXXX (XXXXXX)
+For Russian organizations (individuals) – a sequence number of the person’s entry in the territorial section of the Unified State Register of Taxpayers (USRT). It consists of 5 digits in case of organizations and 6 digits in case of individuals.
+For foreign organizations – code of foreign organization according to the reference book “Foreign Companies Coding”.
+3) C (CC) – control number (1 digit for organization, 2 digits for individuals)
+It is generated according to a unique algorithm set by the Federal Tax Service."
+186	Rwanda	RW	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+187	Saint Barthélemy	BL	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+188	"Saint Helena, Ascension and Tristan da Cunha"	SH	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+189	Saint Kitts and Nevis	KN	No	No	"99999, 999999, 9999999"	"A Tax Identification Number (TIN) is issued solely by the jurisdiction’s Tax Administration, Saint
+Christopher and Nevis Inland Revenue Department (SKNIRD). An individual or legal person or legal
+entity will be issued a TIN upon registration if they are liable for the licences and taxes administered
+by the SKNIRD. TINs issued are perpetual and therefore will not be altered for any reason. Most tax forms issued by the SKNIRD, such as Remittance/Tax Return Forms, Statements and Demand Notices etc., will bear the TIN and/or a Tax Account. The Tax Account is a concatenation of the TIN and the tax type number. This construct is represented with the last two digits representing the tax type number, while all other digits before representing the TIN. For instance, if a taxpayer’s TIN is 99999, then Corporate Income Tax documents will show 9999904; Value Added Tax documents will show 9999945; Withholding Tax documents will show 9999936."	"99999, 999999, 9999999"	"A Tax Identification Number (TIN) is issued solely by the jurisdiction’s Tax Administration, Saint
+Christopher and Nevis Inland Revenue Department (SKNIRD). An individual or legal person or legal
+entity will be issued a TIN upon registration if they are liable for the licences and taxes administered
+by the SKNIRD. TINs issued are perpetual and therefore will not be altered for any reason. Most tax forms issued by the SKNIRD, such as Remittance/Tax Return Forms, Statements and Demand Notices etc., will bear the TIN and/or a Tax Account. The Tax Account is a concatenation of the TIN and the tax type number. This construct is represented with the last two digits representing the tax type number, while all other digits before representing the TIN. For instance, if a taxpayer’s TIN is 99999, then Corporate Income Tax documents will show 9999904; Value Added Tax documents will show 9999945; Withholding Tax documents will show 9999936."
+190	Saint Lucia	LC	No	No	"9, 99, 999, 9999, 99999, 999999"	The TIN consists of a maximum of six (6) digits	"9, 99, 999, 9999, 99999, 999999"	The TIN consists of a maximum of six (6) digits
+191	Saint Martin (French part)	MF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+192	Saint Pierre and Miquelon	PM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+193	Saint Vincent and the Grenadines	VC	Yes	Yes	"999999, 9999999, 99999999, 999999999, 9999999999"	The TINs issued by the Inland Revenue Department are strictly numeric in structure and are automatically generated by SIGTAS - the Department’s data storage and management system for tax purposes	"999999, 9999999, 99999999, 999999999, 9999999999"	The TINs issued by the Inland Revenue Department are strictly numeric in structure and are automatically generated by SIGTAS - the Department’s data storage and management system for tax purposes
+194	Samoa	WS	No	No	"99999, 999999, 9999999, 99999999, 999999999"	"There is currently no specific or unique structure for the digits allocated for each TIN.
+
+Issuance of TIN started from the number 70004, there is also no specific reason for why it started from
+this number. The next new TIN issued to a newly registered business or the next person that requires a TIN depends on the last number (TIN) allocated. For e.g. If by today the TINs issued has come up to the number 11001, the next person who will register for a TIN will receive the TIN number of 11002. "	"99999, 999999, 9999999, 99999999, 999999999"	"There is currently no specific or unique structure for the digits allocated for each TIN.
+
+Issuance of TIN started from the number 70004, there is also no specific reason for why it started from
+this number. The next new TIN issued to a newly registered business or the next person that requires a TIN depends on the last number (TIN) allocated. For e.g. If by today the TINs issued has come up to the number 11001, the next person who will register for a TIN will receive the TIN number of 11002. "
+195	San Marino	SM	Yes	Yes	"9, 99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999"	"TINs consist of a block of digits assigned in sequence, but they do not contain any information on taxpayers, such as, for example, name and surname, address, age, gender. In the case of the Tax Registration Number (COE), the TIN is preceded by the letters SM and consists of 5 digits.
+Format Explanation Comment
+1. Individuals - 999999999 - More than one digit - The first digits might be omitted if they correspond to the
+digit zero
+2. Entities - SM99999 - SM + 5 digits - The Social Security Number is indicated on the front of the identity card issued by the Vital Statistics Office, next to the photo of the holder, on the right.
+The Tax Registration Number (COE) is indicated in the Certificate of License, issued by the Office of Industry, Handicraft and Trade."	"SM99999, 99999"	"TINs consist of a block of digits assigned in sequence, but they do not contain any information on taxpayers, such as, for example, name and surname, address, age, gender. In the case of the Tax Registration Number (COE), the TIN is preceded by the letters SM and consists of 5 digits.
+Format Explanation Comment
+1. Individuals - 999999999 - More than one digit - The first digits might be omitted if they correspond to the
+digit zero
+2. Entities - SM99999 - SM + 5 digits - The Social Security Number is indicated on the front of the identity card issued by the Vital Statistics Office, next to the photo of the holder, on the right.
+The Tax Registration Number (COE) is indicated in the Certificate of License, issued by the Office of Industry, Handicraft and Trade."
+196	Sao Tome and Principe	ST	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+197	Saudi Arabia	SA	No	Yes	"1999999999, 2999999999, 3999999999, 399999999999903"	"The Saudi TIN Structure is as follows:
+The (first digit) is the GCC Member State.
+The (next eight digits) is a serial number.
+The next digit is a check digit. "	"3999999999, 399999999999903"	"The Saudi TIN Structure is as follows:
+The (first digit) is the GCC Member State.
+The (next eight digits) is a serial number.
+The next digit is a check digit. "
+198	Senegal	SN	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+199	Serbia	RS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+200	Seychelles	SC	No	No	999999999	"The Tax Identification Number, TIN, is a 9 digit number which is randomly generated by an algorithm which also ensures that it meets a checksum requirement. "	999999999	"The Tax Identification Number, TIN, is a 9 digit number which is randomly generated by an algorithm which also ensures that it meets a checksum requirement. "
+201	Sierra Leone	SL	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+202	Singapore	SG	Yes	Yes	"S9999999A, T9999999A, F9999999A, G9999999A, M9999999A"	"NRIC/FIN - #0000000@
+Where:
+#
+• This is a letter that can be ""S"", ""T"", ""F"",""G"" or “M” depending on the status of the holder.
+• Singapore citizens and permanent residents born before the year 2000 are assigned the letter ""S"".
+• Singapore citizens and permanent residents born in and after 2000 are assigned the letter ""T"".
+• Foreigners holding employment or student passes issued before 2000 are assigned the letter ""F"".
+• Foreigners holding employment or student passes issued in and after 2000 are assigned the letter ""G""
+• Foreigners holding employment or student passes issued in and after 2022 are assigned the letter ""M""
+0000000
+• This is a 7-digit serial number assigned to the document holder
+• For Singapore citizens and permanent residents born in 1968 and after, their NRIC number will start
+with their year of birth e.g. 71xxxxx#. For those born in 1967 and earlier, the NRIC number does not
+relate to year of birth, and commonly begins with 0 or 1. Non-native Singaporeans who were born
+before 1967 are assigned the heading numbers 2 or 3 upon attaining permanent residency or
+citizenship. They are randomly assigned according to the issuance number. Subsequent numbers are
+only for people attaining permanent residency or citizenship after 2008 (“4” or “5”)
+@ • This is a checksum alphabet"	"99999999A, 999999999A, F00099999A, F[space][space][space]99999A, S99AA9999A, T99AA9999A, A9999999A, 999999999A, 9999999999"	"UEN – Business (ROB): NNNNNNNNC (9 characters)
+UEN – Local Company (ROC): YYYYNNNNNC - for Local Companies (10 characters)
+F000NNNNNC or FDDDNNNNNC - for Foreign Companies
+UEN – Others: SYYPQNNNNC or TYYPQNNNNC (10 characters)
+ASGD: ANNNNNNNC (9 characters)
+ITR: NNNNNNNNNC or NNNNNNNNNN (10 characters)
+Where:
+D is a space
+C is a check alphabet
+N is numeric
+YYYY is a year
+TYY and SYY are the year of issuance, where T represents ‘20’ and S represent ‘19’ PQ
+is the entity type, e.g. ‘LL’ represents ‘Limited Liability Partnership"
+203	Sint Maarten	SX	No	Yes	999999999	A 9-digit numeric CRIB for both individuals and entities. The CRIB number is computer generated using the 11-proof algorithm method.	999999999	A 9-digit numeric CRIB for both individuals and entities. The CRIB number is computer generated using the 11-proof algorithm method.
+204	Slovak Republic	SK	No	Yes	"9999999999, 999999999, 999999/9999, 999999/999"	"Format Explanation Comment
+9999999999 10 digits
+999999/999(9) 9 or 10 digits
+For the purpose of IT processing, the TIN should be written as a single block, without any slash sign.
+TIN assigned by Financial Administration does not consist of any personal data of natural person. TIN consists of 10 digits.
+If natural person does not have a TIN then a unique birth number is used for tax purposes.
+Birth number consists of 10 digits [C1 C2 C3 C4 C5 C6 C7 C8 C9 C10].
+C1, C2 represent digits in the range 0...9.
+C3, C4 represent digits in the range 01...12 or in range 51…62.
+C5, C6 represent digits in the range 01...31.
+C7, C8, C9 represent digits in the range 0...9.
+C10 represents digit in n the range 0...9.
+Exception: If the number consisting of the digits C1, C2 is lower than 54, C10 might not be present."	9999999999	"Format Explanation Comment
+9999999999 10 digits
+999999/999(9) 9 or 10 digits
+For the purpose of IT processing, the TIN should be written as a single block, without any slash sign.
+TIN assigned by Financial Administration does not consist of any personal data of natural person. TIN consists of 10 digits.
+If natural person does not have a TIN then a unique birth number is used for tax purposes.
+Birth number consists of 10 digits [C1 C2 C3 C4 C5 C6 C7 C8 C9 C10].
+C1, C2 represent digits in the range 0...9.
+C3, C4 represent digits in the range 01...12 or in range 51…62.
+C5, C6 represent digits in the range 01...31.
+C7, C8, C9 represent digits in the range 0...9.
+C10 represents digit in n the range 0...9.
+Exception: If the number consisting of the digits C1, C2 is lower than 54, C10 might not be present."
+205	Slovenia	SI	Yes	Yes	99999999	"The SI tax number is a random eight-digit number (first digit cannot be 0):
+• The first seven digits represent the basic number, which is a randomly chosen number from number range
+from 1,000,000 to 9,999,999.
+• The eighth digit is a control number,"	99999999	"The SI tax number is a random eight-digit number (first digit cannot be 0):
+• The first seven digits represent the basic number, which is a randomly chosen number from number range
+from 1,000,000 to 9,999,999.
+• The eighth digit is a control number,"
+206	Solomon Islands	SB	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+207	Somalia	SO	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+208	South Africa	ZA	No	Yes	9999999999	"A South African Income Tax reference number is 10 numeric digits long. The tax reference number can only
+start with 0, 1, 2, 3 or 9 e.g. 0123456789."	9999999999	"A South African Income Tax reference number is 10 numeric digits long. The tax reference number can only
+start with 0, 1, 2, 3 or 9 e.g. 0123456789."
+209	South Georgia and the South Sandwich Islands	GS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+210	South Sudan	SS	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+211	Spain	ES	Yes	Yes	"99999999A, L9999999A, K9999999A, X9999999A, Y9999999A, Z9999999A, M9999999A"	"TIN in Spain is unique for tax and customs purposes and contains nine characters, the last of them is a
+letter for control (Natural persons) or a control character (Non - natural persons).
+Natural persons of Spanish nationality: Generally, the TIN is the number on your National Identity
+Card, issued by the Ministry of Internal Affairs (General Directorate of Police). The Tax Administration
+will provide Spanish natural persons who are not obliged to possess a National Identity Card (DNI) with
+a Tax Identification Number (TIN) starting with an L (non-resident Spaniards) or a K (resident Spaniards
+under the age of 14 years), upon request.
+Natural persons without Spanish nationality: Generally, their Tax Identification Number (TIN) is the
+Foreigners’ Identification Number (NIE), likewise issued by the Ministry of Internal Affairs. Natural
+persons without Spanish nationality who do not possess a Foreigners’ Identification Number (NIE) but
+need a Tax Identification Number (TIN) because they are going to engage in transactions involving
+Spanish taxation can obtain a Tax Identification Number starting with the letter M, that will have a
+transitory nature, until they obtain a Foreigners’ Identification Number (NIE), where appropriate, also
+issued by the Tax Administration. "	"A99999999, A9999999A, B99999999, B9999999A, C99999999, C9999999A, D99999999, D9999999A, E99999999, E9999999A, F99999999, F9999999A, G99999999, G9999999A, H99999999, H9999999A, J99999999, J9999999A, N99999999, N9999999A, P99999999, P9999999A, Q99999999, Q9999999A, S99999999, S9999999A, U99999999, U9999999A, V99999999, V9999999A, W99999999, W9999999A"	"Concerning the entities, they are obliged to obtain a TIN, which is issued by the Tax Administration"
+212	Sri Lanka	LK	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+213	Sudan	SD	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+214	Suriname	SR	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+215	Svalbard and Jan Mayen	SJ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+216	Sweden	SE	Yes	Yes	999999-9999	"The Personal identity number and the Co-ordination number consist of 10 digits. There is a hyphen (or
+minus sign) between the 6th and the 7th digits. "	999999-9999	"The TIN for legal persons consist of 10 digits. There is a hyphen (or minus sign) between the 6th and the
+7th digits. "
+217	Switzerland	CH	Yes	No	756.9999.9999.99	"Individuals:
+The current OASI Number was introduced in 2008. It consists of an initial 3-digit country code (Switzerland = 756), a 9-digit random number which provides a lifelong, unique and anonymous identification to each person, and a final check digit. For better readability, each block is separated from the other by a dot. The structure of the OASI Number can be modelled as follows: 756.1234.5678.97"	CHE-999.999.999	"Entities:
+The structure of a UID-number can be modelled as follows: CHE-999.999.99C
+The UID-number consists of nine digits, is randomly assigned and does not contain any relevant information (UID-number is a non-descriptive number). In order to indicate the Swiss origin of the number, it contains the prefix ""CHE"". This prefix corresponds to the alpha-3 variant of ISO 3166-1.
+The last digit (C) of the UID-number is a check digit and is determined on the basis of a standard calculation (modulo 11).
+For better readability, a hyphen is put between the prefix and the digital part of the UID-number. Analogous to the prefix, the numerical part is split into three blocks of three numbers, each block being separated from the other by a dot."
+218	Syrian Arab Republic	SY	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+219	Taiwan (Province of China)	TW	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+220	Tajikistan	TJ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+221	"Tanzania, the United Republic of"	TZ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+222	Thailand	TH	No	No	9999999999999	A Tax Identification Number (TIN) consists of 13 digits.	9999999999999	A Tax Identification Number (TIN) consists of 13 digits.
+223	Timor-Leste	TL	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+224	Togo	TG	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+225	Tokelau	TK	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+226	Tonga	TO	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+227	Trinidad and Tobago	TT	No	No	9999999999	A Tax Identification Number (TIN) consists of 10 digits.	9999999999	A Tax Identification Number (TIN) consists of 10 digits.
+228	Tunisia	TN	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+229	Türkiye	TR	Yes	No	"99999999999, 9999999999"	"T.C. Kimlik Numaras? — TCKN: 11-digit identity number used as the tax identifier for Turkish individuals.
+Vergi Kimlik Numaras? — VKN: 10-digit tax identification number used principally for legal entities and for persons who cannot use a TCKN.
+"	9999999999	"T.C. Kimlik Numaras? — TCKN: 11-digit identity number used as the tax identifier for Turkish individuals.
+Vergi Kimlik Numaras? — VKN: 10-digit tax identification number used principally for legal entities and for persons who cannot use a TCKN.
+"
+230	Turkmenistan	TM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+231	Turks and Caicos Islands	TC	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+232	Tuvalu	TV	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+233	Uganda	UG	Yes	Yes	9999999999	"The TIN is a ten-digit numeric identifier assigned free of charge and serves as the primary means of identifying taxpayers in Uganda. It is mandatory for persons engaging in taxable activities or transactions with the tax authority.
+a) The first nine digits represent a sequentially assigned number.
+b) The final digit serves as a check digit used for validation purposes. It is generated using a modulus-based algorithm (commonly referred to as a Mod 97 validation mechanism), which supports the verification of the TIN’s validity during processing and data exchange."	9999999999	"The TIN is a ten-digit numeric identifier assigned free of charge and serves as the primary means of identifying taxpayers in Uganda. It is mandatory for persons engaging in taxable activities or transactions with the tax authority.
+a) The first nine digits represent a sequentially assigned number.
+b) The final digit serves as a check digit used for validation purposes. It is generated using a modulus-based algorithm (commonly referred to as a Mod 97 validation mechanism), which supports the verification of the TIN’s validity during processing and data exchange."
+234	Ukraine	UA	Yes	Yes	9999999999	"For individual:
+RNOKPP is the ten-digit numerical code (without use of letters, hyphens, or other symbols).
+The structure of RNOKPP is as follows: XXXXXNNNNK, where:
+XXXXX – sequence number of registration of birth date of an individual (for one date of birth two or more sequence numbers can be given);
+NNNN – sequence number of the account card;
+K – control category"	"99999999, 779999999, 889999999"	"For a legal entity (legal person) and a separate subdivision of a legal entity:
+1) EDRPOU Code is the eight-digit numerical code (without use of letters, hyphens, or other symbols) and
+which has a control category.
+2) Registration number assigned by the controlling body (STS) is the nine-digit numerical code (without use
+of letters, hyphens, or other symbols).
+The structure of it is as follows: XX000000K, where:
+XX - takes the value 77 - for the taxpayers – residents of Ukraine, 88 - for the taxpayers - nonresidents of Ukraine;
+000000 – sequence number;
+K – the control category, which is formed according to the algorithm determined by the STS."
+235	United Arab Emirates	AE	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+236	United Kingdom	GB	No	No	"AA999999A, AA999999B, AA999999C, AA999999D, 9999999999"	"1. The unique taxpayer reference (UTR). The format is a unique set of 10 numerals allocated
+automatically by HMRC for both individuals and entities who have to submit a tax return. Although
+used on tax returns and some other correspondence, the UTR is not evidenced on a card or other
+official document.
+2. The other reference used in the UK, is the National Insurance Number (NINO). This consists of two
+letters, six numbers and a suffix letter A, B, C or D (for example DQ123456C). All individuals living
+regularly in the United Kingdom are either allocated or can be issued with a NINO. A NINO is issued
+automatically to young people living in the UK when they approach the age of 16. The NINO is used
+on a number of official documents. Individuals are notified of their NINO by an official letter, from
+the Department for Work and Pensions or HM Revenue and Customs. However this contains the
+statement, “This is not proof of identity” and therefore it cannot be used to verify the identity of the
+holder. The NINO can be quoted as the tax reference number on some official documents from HM
+Revenue and Customs. "	9999999999	"1. The unique taxpayer reference (UTR). The format is a unique set of 10 numerals allocated
+automatically by HMRC for both individuals and entities who have to submit a tax return. Although
+used on tax returns and some other correspondence, the UTR is not evidenced on a card or other
+official document.
+2. The other reference used in the UK, is the National Insurance Number (NINO). This consists of two
+letters, six numbers and a suffix letter A, B, C or D (for example DQ123456C). All individuals living
+regularly in the United Kingdom are either allocated or can be issued with a NINO. A NINO is issued
+automatically to young people living in the UK when they approach the age of 16. The NINO is used
+on a number of official documents. Individuals are notified of their NINO by an official letter, from
+the Department for Work and Pensions or HM Revenue and Customs. However this contains the
+statement, “This is not proof of identity” and therefore it cannot be used to verify the identity of the
+holder. The NINO can be quoted as the tax reference number on some official documents from HM
+Revenue and Customs. "
+237	United States Minor Outlying Islands	UM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+238	United States of America	US	Yes	Yes	"999999999, 999-99-9999, 999999999"	"An SSN is in the following format: xxx-xx-xxxx. The first three digits have geographical significance,
+the next two digits have no real significance and are issued sequentially, and the last four digits are
+random. An EIN is in the following format: xx-xxxxxxx.
+An ITIN is a nine-digit number that always begins with the number 9 and is in the following format:
+9xx-xx-xxxx. "	"999999999, 99-9999999"	"An SSN is in the following format: xxx-xx-xxxx. The first three digits have geographical significance,
+the next two digits have no real significance and are issued sequentially, and the last four digits are
+random. An EIN is in the following format: xx-xxxxxxx.
+An ITIN is a nine-digit number that always begins with the number 9 and is in the following format:
+9xx-xx-xxxx. "
+239	Uruguay	UY	Yes	Yes	"99999999, 999999999, 999999990019"	"RUT NUMBER:
+This number is formed by 12 digits, the first two indicate the registration number, the following six sequential digits indicate the number and the last 4 are always where x is the verifying digit.
+Where:
+-NNNNNNNNNNN: is formed by eleven digits containing a unique number.
+-D: is formed by one digit containing the verification digit for the full number.
+FOREIGNERS\` IDENTIFICATION NUMBER N I E
+This number is formed by 9 digits, with the following definition:
+-9NNNNNNN: is formed by eight digits containing a unique number.
+-D: is formed by one digit containing the verification digit for the full number. Identity Card Number:
+This number is granted by the DNIC (National Direction of Civil Identification), and is formed by 7 numbers, plus a verifying digit. For our RUT records, we register the number without any points or hyphens"	999999990019	"RUT NUMBER:
+This number is formed by 12 digits, the first two indicate the registration number, the following six sequential digits indicate the number and the last 4 are always where x is the verifying digit.
+Where:
+-NNNNNNNNNNN: is formed by eleven digits containing a unique number.
+-D: is formed by one digit containing the verification digit for the full number.
+FOREIGNERS\` IDENTIFICATION NUMBER N I E
+This number is formed by 9 digits, with the following definition:
+-9NNNNNNN: is formed by eight digits containing a unique number.
+-D: is formed by one digit containing the verification digit for the full number. Identity Card Number:
+This number is granted by the DNIC (National Direction of Civil Identification), and is formed by 7 numbers, plus a verifying digit. For our RUT records, we register the number without any points or hyphens"
+240	Uzbekistan	UZ	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+241	Vanuatu	VU	Yes	Yes	999999	"The official OECD/Vanuatu jurisdiction sheet states that the TIN is systematically generated by the Revenue Management System, but it does not expressly state its digit length. However, current official DCIR publications consistently display TINs as six-digit numeric values, including numbers such as 100096, 220529, 511986, 608745, 713489 and 892212."	999999	"The official OECD/Vanuatu jurisdiction sheet states that the TIN is systematically generated by the Revenue Management System, but it does not expressly state its digit length. However, current official DCIR publications consistently display TINs as six-digit numeric values, including numbers such as 100096, 220529, 511986, 608745, 713489 and 892212."
+242	Venezuela (Bolivarian Republic of)	VE	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+243	Viet Nam	VN	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+244	Virgin Islands (U.S.)	VI	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+245	Wallis and Futuna	WF	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+246	Western Sahara*	EH	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+247	Yemen	YE	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+248	Zambia	ZM	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+249	Zimbabwe	ZW	NA	NA	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)	No format prescribed as per OECD	Details are not available on the OECD Website for the Tax Identification Number (TIN)
+`;
+
+        const state = {
+            countries: [],
+            selectedCountryData: null,
+            entityType: 'individual', 
+            currentInput: '',
+            valTimeout: null,
+            clockInterval: null
+        };
+
+        const DOM = {
+            input: document.getElementById('tinInput'),
+            btnInd: document.getElementById('btn-individual'),
+            btnEnt: document.getElementById('btn-entity'),
+            step2: document.getElementById('step2-card'),
+            step3: document.getElementById('step3-card'),
+            step4: document.getElementById('step4-card'),
+            valLoading: document.getElementById('validation-loading'),
+            valContent: document.getElementById('validation-result-content'),
+            resBanner: document.getElementById('result-banner')
+        };
+        
+        // Custom Toast function to strictly avoid using window.alert()
+        function showToast(msg, isError = false) {
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-white transform transition-all duration-300 translate-y-10 opacity-0 ${isError ? 'bg-rose-600' : 'bg-slate-700'}`;
+            toast.textContent = msg;
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => { toast.classList.remove('translate-y-10', 'opacity-0'); }, 10);
+            setTimeout(() => { 
+                toast.classList.add('translate-y-10', 'opacity-0'); 
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function parseTSV(tsv) {
+            const rows = [];
+            let currentRow = [];
+            let currentCell = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < tsv.length; i++) {
+                const char = tsv[i];
+                const nextChar = tsv[i + 1];
+                
+                if (char === '"') {
+                    if (inQuotes && nextChar === '"') { currentCell += '"'; i++; } 
+                    else { inQuotes = !inQuotes; }
+                } else if (char === '\t' && !inQuotes) {
+                    currentRow.push(currentCell.trim()); currentCell = '';
+                } else if ((char === '\n' || char === '\r') && !inQuotes) {
+                    if (char === '\r' && nextChar === '\n') i++; 
+                    currentRow.push(currentCell.trim());
+                    if (currentRow.length > 1 || currentRow[0] !== '') rows.push(currentRow);
+                    currentRow = []; currentCell = '';
+                } else {
+                    currentCell += char;
+                }
+            }
+            if (currentCell || currentRow.length > 0) {
+                currentRow.push(currentCell.trim());
+                rows.push(currentRow);
+            }
+            return rows;
+        }
+
+        let deferredPrompt = null;
+
+        function registerPwaFeatures() {
+            const installBtn = document.getElementById('install-btn');
+
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    if (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+                        navigator.serviceWorker.register('./sw.js').catch(err => console.warn('Service worker registration failed:', err));
+                    }
+                });
+            }
+
+            window.addEventListener('beforeinstallprompt', (event) => {
+                event.preventDefault();
+                deferredPrompt = event;
+                if (installBtn) installBtn.classList.remove('hidden');
+            });
+
+            window.addEventListener('appinstalled', () => {
+                if (installBtn) installBtn.classList.add('hidden');
+                showToast('App installed successfully.');
+            });
+
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    if (!deferredPrompt) {
+                        showToast('Install is not available right now. Open this app in a supported browser.', true);
+                        return;
+                    }
+
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        showToast('Install prompt accepted.');
+                    } else {
+                        showToast('Install cancelled.', true);
+                    }
+                    deferredPrompt = null;
+                    installBtn.classList.add('hidden');
+                });
+            }
+        }
+
+        function initApp() {
+            try {
+                const rows = parseTSV(rawTSV);
+                for (let i = 1; i < rows.length; i++) {
+                    if (rows[i].length < 8) continue;
+                    state.countries.push({
+                        id: rows[i][2] || 'NA', 
+                        name: rows[i][1] || 'Unknown',
+                        autoInd: rows[i][3] || 'NA', 
+                        autoEnt: rows[i][4] || 'NA',
+                        formatIndRaw: rows[i][5] || '', 
+                        descInd: rows[i][6] || '',
+                        formatEntRaw: rows[i][7] || '', 
+                        descEnt: rows[i][8] || ''
+                    });
+                }
+                initDropdown();
+            } catch (err) {
+                console.error("Data Parsing Error: ", err);
+                showToast("Critical System Error: Failed to parse OECD Master Dataset.", true);
+            }
+
+            try {
+                const user = sessionStorage.getItem('tin_dashboard_user');
+                if (user) showDashboard(user);
+            } catch(e) { } // bypass Safari block
+
+            setupEventListeners();
+            registerPwaFeatures();
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit', second:'2-digit' };
+            document.getElementById('live-clock').textContent = now.toLocaleDateString('en-US', options);
+        }
+
+        function setupEventListeners() {
+            document.getElementById('login-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                // Fix for iOS auto-capitalization and trailing spaces
+                const pInput = document.getElementById('password').value.trim().toLowerCase();
+                
+                if (pInput === 'pvj') {
+                    const user = document.getElementById('username').value.trim() || 'Authorized User';
+                    try { sessionStorage.setItem('tin_dashboard_user', user); } catch(err) { }
+                    showDashboard(user);
+                } else {
+                    document.getElementById('login-error').classList.remove('hidden');
+                }
+            });
+
+            document.getElementById('toggle-password').addEventListener('click', () => {
+                const pInput = document.getElementById('password');
+                pInput.setAttribute('type', pInput.getAttribute('type') === 'password' ? 'text' : 'password');
+            });
+
+            DOM.input.addEventListener('input', (e) => {
+                const start = e.target.selectionStart; const end = e.target.selectionEnd;
+                e.target.value = e.target.value.toUpperCase();
+                e.target.setSelectionRange(start, end);
+                state.currentInput = e.target.value;
+                debouncedValidation();
+            });
+        }
+
+        function initDropdown() {
+            new TomSelect('#countrySelect', {
+                valueField: 'id', labelField: 'name', searchField: ['id', 'name'],
+                options: state.countries, placeholder: 'Type country code or name...',
+                maxItems: 1, closeAfterSelect: true,
+                render: {
+                    option: function(data, escape) { return `<div><span class="font-bold text-blue-300 mr-2">${escape(data.id)}</span> ${escape(data.name)}</div>`; },
+                    item: function(data, escape) { return `<div>${escape(data.name)} (${escape(data.id)})</div>`; }
+                },
+                sortField: [{field: 'name', direction: 'asc'}],
+                onChange: function(value) { this.blur(); handleCountrySelect(value); }
+            });
+        }
+
+        function showDashboard(user) {
+            document.getElementById('login-modal').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('main-app').style.display = 'flex';
+            document.getElementById('display-username').textContent = user;
+            updateClock();
+            state.clockInterval = setInterval(updateClock, 1000);
+        }
+
+        window.handleLogout = function() {
+            try { sessionStorage.removeItem('tin_dashboard_user'); } catch(err) {}
+            clearInterval(state.clockInterval);
+            window.location.reload();
+        };
+
+        window.handlePaste = async function() {
+            try {
+                const text = await navigator.clipboard.readText();
+                if (text) {
+                    DOM.input.value = text.trim().toUpperCase();
+                    state.currentInput = DOM.input.value;
+                    debouncedValidation();
+                }
+            } catch (err) { 
+                showToast("Clipboard permission denied. Please use Ctrl+V or Paste via keyboard.", true); 
+            }
+        }
+
+        function handleCountrySelect(countryCode) {
+            const data = state.countries.find(c => c.id === countryCode);
+            if (!data) return;
+            state.selectedCountryData = data;
+            
+            DOM.step2.classList.remove('step-disabled');
+            DOM.step4.classList.remove('step-disabled');
+            DOM.input.value = ''; state.currentInput = '';
+            
+            updatePlaceholder();
+            resetValidationUI();
+            
+            document.getElementById('badge-auto-ind').textContent = `TIN Auto-Issued: ${data.autoInd}`;
+            document.getElementById('badge-auto-ind').className = `text-xs px-2 py-1 rounded-md border font-medium ${data.autoInd.toLowerCase() === 'yes' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`;
+            document.getElementById('badge-auto-ent').textContent = `TIN Auto-Issued: ${data.autoEnt}`;
+            document.getElementById('badge-auto-ent').className = `text-xs px-2 py-1 rounded-md border font-medium ${data.autoEnt.toLowerCase() === 'yes' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-rose-500/20 text-rose-300 border-rose-500/30'}`;
+            
+            document.getElementById('info-desc-ind').textContent = data.descInd || 'No descriptive rules provided.';
+            document.getElementById('info-desc-ent').textContent = data.descEnt || 'No descriptive rules provided.';
+        }
+
+        window.setEntityType = function(type) {
+            if (state.entityType === type) return;
+            state.entityType = type;
+            
+            if (type === 'individual') {
+                DOM.btnInd.classList.add('bg-white/10', 'text-white', 'shadow-sm'); DOM.btnInd.classList.remove('text-slate-400', 'hover:text-white');
+                DOM.btnEnt.classList.remove('bg-white/10', 'text-white', 'shadow-sm'); DOM.btnEnt.classList.add('text-slate-400', 'hover:text-white');
+            } else {
+                DOM.btnEnt.classList.add('bg-white/10', 'text-white', 'shadow-sm'); DOM.btnEnt.classList.remove('text-slate-400', 'hover:text-white');
+                DOM.btnInd.classList.remove('bg-white/10', 'text-white', 'shadow-sm'); DOM.btnInd.classList.add('text-slate-400', 'hover:text-white');
+            }
+            updatePlaceholder();
+            if (state.currentInput) debouncedValidation();
+        };
+
+        function updatePlaceholder() {
+            if (!state.selectedCountryData) return;
+            let rawFormats = state.entityType === 'individual' ? state.selectedCountryData.formatIndRaw : state.selectedCountryData.formatEntRaw;
+            
+            if(!rawFormats || rawFormats === "N/A" || rawFormats === "-") { 
+                DOM.input.placeholder = "No format defined"; 
+                return; 
+            }
+
+            if (rawFormats.trim().toLowerCase().includes("no format prescribed as per oecd")) {
+                DOM.input.placeholder = "Enter TIN (No format prescribed)";
+                return;
+            }
+            
+            let cleaned = rawFormats.replace(/"/g, '').split(/,\s*|\n| or /i)[0].trim();
+            if (cleaned) {
+                DOM.input.placeholder = `Sample format: (${cleaned})`;
+            }
+        }
+
+        function buildRegexFromFormat(format) {
+            let regexStr = '^';
+            for (let i = 0; i < format.length; i++) {
+                const char = format[i];
+                if (char === '9') {
+                    // Rule: '9' matches ANY single digit 0-9
+                    regexStr += '\\d'; 
+                } else if (char.toUpperCase() === 'A') {
+                    // Rule: 'A' matches ANY single uppercase letter
+                    regexStr += '[A-Z]'; 
+                } else {
+                    // Rule: ANY OTHER character (letter, digit, or special symbol) is a strict literal match
+                    if (['\\', '^', '$', '.', '|', '?', '*', '+', '(', ')', '[', ']', '{', '}'].includes(char)) {
+                        regexStr += '\\' + char; // escape regex specials
+                    } else {
+                        regexStr += char; // literal match
+                    }
+                }
+            }
+            regexStr += '$';
+            return new RegExp(regexStr);
+        }
+
+        function stripNonAlphaNumeric(str) { return str.replace(/[^A-Z0-9]/ig, ''); }
+
+        function debouncedValidation() {
+            clearTimeout(state.valTimeout);
+            if (state.currentInput.trim() === '') { resetValidationUI(); return; }
+            
+            DOM.step3.classList.remove('step-disabled');
+            document.getElementById('validation-empty-state').classList.add('hidden');
+            DOM.valContent.classList.add('hidden');
+            ['print-btn', 'png-export-btn'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            DOM.valLoading.classList.remove('hidden');
+            
+            state.valTimeout = setTimeout(runValidationEngine, 300);
+        }
+
+        function runValidationEngine() {
+            const formatRaw = state.entityType === 'individual' ? state.selectedCountryData.formatIndRaw : state.selectedCountryData.formatEntRaw;
+            const input = state.currentInput;
+            
+            // Handle "No format prescribed" override
+            if (formatRaw && formatRaw.trim().toLowerCase().includes("no format prescribed as per oecd")) {
+                renderValidationFeedback(true, false, input, false, [formatRaw], true);
+                return;
+            }
+
+            let allowedFormats = [];
+            if (formatRaw && formatRaw !== "N/A" && formatRaw !== "-") {
+                let cleaned = formatRaw.replace(/"/g, '');
+                allowedFormats = cleaned.split(/,\s*|\n| or /i).map(f => f.trim()).filter(f => f.length > 0);
+            }
+
+            let isValid = false, isNearMiss = false, isLiteralError = false;
+
+            if (allowedFormats.length > 0) {
+                // Block literal format string bypasses (e.g. typing A9999)
+                if (allowedFormats.includes(input) && (input.includes('9') || input.includes('A'))) {
+                    isLiteralError = true;
+                } else {
+                    // Test exactly against all possible formats
+                    for (let fmt of allowedFormats) {
+                        try { 
+                            const regex = buildRegexFromFormat(fmt);
+                            if (regex.test(input)) { isValid = true; break; } 
+                        } catch(e) {}
+                    }
+                    
+                    // Near miss logic
+                    if (!isValid) {
+                        const strippedInput = stripNonAlphaNumeric(input);
+                        for (let fmt of allowedFormats) {
+                            try { 
+                                const strippedRegex = buildRegexFromFormat(stripNonAlphaNumeric(fmt));
+                                if (strippedRegex.test(strippedInput)) { isNearMiss = true; break; } 
+                            } catch(e) {}
+                        }
+                    }
+                }
+            }
+
+            renderValidationFeedback(isValid, isNearMiss, input, isLiteralError, allowedFormats, false);
+        }
+
+        function renderValidationFeedback(isValid, isNearMiss, input, isLiteralError, allowedFormats, isNoFormat = false) {
+            DOM.valLoading.classList.add('hidden');
+            DOM.valContent.classList.remove('hidden');
+            ['print-btn', 'png-export-btn'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+
+            const resIcon = document.getElementById('result-icon');
+            const resTitle = document.getElementById('result-title');
+            const resMsg = document.getElementById('result-msg');
+            const inputIcon = document.getElementById('input-status-icon');
+            
+            DOM.resBanner.className = 'rounded-xl p-5 flex items-start gap-4 border mb-5 shadow-lg bg-opacity-20 transition-all';
+            inputIcon.style.display = 'block';
+
+            if (isNoFormat) {
+                DOM.resBanner.classList.add('bg-emerald-500', 'border-emerald-500/50');
+                DOM.resBanner.classList.remove('bg-amber-500', 'bg-rose-500', 'border-amber-500/50', 'border-rose-500/50');
+                resIcon.innerHTML = `<svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                resTitle.textContent = "No format prescribed as per OECD"; 
+                resTitle.className = "text-lg font-bold text-emerald-400";
+                resMsg.textContent = "You may enter any ID value for this jurisdiction. No validation rules apply.";
+                DOM.input.style.borderColor = '#34d399'; DOM.input.style.boxShadow = '0 0 0 3px rgba(52, 211, 153, 0.2)';
+                inputIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>`; inputIcon.className = 'h-6 w-6 text-emerald-400';
+            } else if (isValid) {
+                DOM.resBanner.classList.add('bg-emerald-500', 'border-emerald-500/50');
+                DOM.resBanner.classList.remove('bg-amber-500', 'bg-rose-500', 'border-amber-500/50', 'border-rose-500/50');
+                resIcon.innerHTML = `<svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                resTitle.textContent = "Format Validated Successfully"; resTitle.className = "text-lg font-bold text-emerald-400";
+                resMsg.textContent = "The structure matches the official OECD rules for this jurisdiction.";
+                DOM.input.style.borderColor = '#34d399'; DOM.input.style.boxShadow = '0 0 0 3px rgba(52, 211, 153, 0.2)';
+                inputIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>`; inputIcon.className = 'h-6 w-6 text-emerald-400';
+            } else if (isNearMiss) {
+                DOM.resBanner.classList.add('bg-amber-500', 'border-amber-500/50');
+                DOM.resBanner.classList.remove('bg-emerald-500', 'bg-rose-500', 'border-emerald-500/50', 'border-rose-500/50');
+                resIcon.innerHTML = `<svg class="w-7 h-7 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+                resTitle.textContent = "Almost There (Near Miss)"; resTitle.className = "text-lg font-bold text-amber-400";
+                resMsg.textContent = `Sequence is correct, but formatting (hyphens, spaces, parenthesis) is missing or misplaced.`;
+                DOM.input.style.borderColor = '#fbbf24'; DOM.input.style.boxShadow = '0 0 0 3px rgba(251, 191, 36, 0.2)';
+                inputIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>`; inputIcon.className = 'h-6 w-6 text-amber-400';
+            } else {
+                DOM.resBanner.classList.add('bg-rose-500', 'border-rose-500/50');
+                DOM.resBanner.classList.remove('bg-emerald-500', 'bg-amber-500', 'border-emerald-500/50', 'border-amber-500/50');
+                resIcon.innerHTML = `<svg class="w-7 h-7 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                resTitle.textContent = "Invalid Structure"; resTitle.className = "text-lg font-bold text-rose-400";
+                resMsg.textContent = isLiteralError ? `Security Check Failed: You entered the raw placeholder format exactly. Enter a real Tax ID.` : `The input "${input}" does not match any valid structural pattern.`;
+                DOM.input.style.borderColor = '#f43f5e'; DOM.input.style.boxShadow = '0 0 0 3px rgba(244, 63, 94, 0.2)';
+                inputIcon.innerHTML = `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>`; inputIcon.className = 'h-6 w-6 text-rose-400';
+            }
+
+            document.getElementById('lbl-country').textContent = state.selectedCountryData.name;
+            document.getElementById('lbl-entity-type').textContent = state.entityType === 'individual' ? 'Individuals' : 'Entity / Non Individual';
+            
+            const fmtContainer = document.getElementById('allowed-formats-container');
+            fmtContainer.innerHTML = '';
+            if (allowedFormats.length === 0) fmtContainer.innerHTML = '<span class="text-sm text-slate-500 italic">No formats defined in dataset.</span>';
+            else allowedFormats.forEach(f => {
+                const badge = document.createElement('div');
+                badge.className = 'px-3 py-1.5 bg-slate-900/80 border border-slate-600 rounded text-sm font-mono tracking-widest text-blue-200 shadow-sm';
+                badge.textContent = f;
+                fmtContainer.appendChild(badge);
+            });
+        }
+
+        function resetValidationUI() {
+            document.getElementById('validation-empty-state').classList.remove('hidden');
+            DOM.valContent.classList.add('hidden');
+            DOM.valLoading.classList.add('hidden');
+            ['print-btn', 'png-export-btn'].forEach(id => document.getElementById(id).classList.add('hidden'));
+            DOM.input.style.borderColor = ''; DOM.input.style.boxShadow = '';
+            document.getElementById('input-status-icon').style.display = 'none';
+            DOM.step3.classList.add('step-disabled');
+        }
+
+        async function executeExport(type) {
+            // Apply strict UI flattening for export
+            document.body.classList.add('exporting-ui');
+            
+            const countryName = state.selectedCountryData ? `${state.selectedCountryData.name} (${state.selectedCountryData.id})` : 'None';
+            document.getElementById('export-country-text').textContent = countryName;
+            document.getElementById('export-entity-type-text').textContent = state.entityType === 'individual' ? 'Individual' : 'Entity / Non Individual';
+            document.getElementById('export-tin-text').textContent = state.currentInput || 'None';
+            
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US');
+            const timeStr = now.toLocaleTimeString('en-US');
+            document.getElementById('export-timestamp').innerHTML = `Report Generated: ${dateStr}, ${timeStr}`;
+
+            const element = document.getElementById('main-app');
+            const fileSuffix = state.selectedCountryData ? state.selectedCountryData.name.replace(/[^a-z0-9]/gi, '_') : 'OECD';
+
+            try {
+                if (type === 'jpg') {
+                    // Activate specific CSS fixes for html2canvas
+                    document.body.classList.add('canvas-layout');
+                    window.scrollTo(0, 0); // prevents top-cropping
+                    
+                    // Small delay to ensure CSS applies completely
+                    await new Promise(r => setTimeout(r, 100));
+
+                    // Use html2canvas for image snapshot (optimized for lightweight size)
+                    const canvas = await html2canvas(element, { 
+                        scale: 1.5, // Reduced from 2 to save size
+                        useCORS: true, 
+                        backgroundColor: '#0f172a',
+                        logging: false
+                    });
+                    const link = document.createElement('a');
+                    link.download = `TIN_Validation_${fileSuffix}.jpg`;
+                    link.href = canvas.toDataURL('image/jpeg', 0.85); // JPEG compression drops size by ~75%
+                    link.click();
+                    
+                    document.body.classList.remove('canvas-layout');
+                } else if (type === 'print') {
+                    // Activate un-flexing logic for Native PDF Print to prevent blank spaces
+                    document.body.classList.add('print-layout');
+                    await new Promise(r => setTimeout(r, 100));
+                    window.print(); 
+                    document.body.classList.remove('print-layout');
+                }
+            } catch(e) {
+                console.error("Export Error: ", e);
+                showToast("An error occurred during export. Please try again.", true);
+            } finally {
+                // Instantly restore the UI
+                document.body.classList.remove('exporting-ui');
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
